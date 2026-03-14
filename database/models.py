@@ -1,0 +1,71 @@
+"""SQLAlchemy models for AI Interview Trainer.
+
+Tables:
+- User: optional user table for future use
+- InterviewSession: represents an interview session (session_id uuid)
+- AnswerResult: per-question inference result linked to a session
+"""
+
+from __future__ import annotations
+
+import logging
+import datetime
+import json
+from typing import Optional
+
+from sqlalchemy import Column, Integer, String, Float, DateTime, Text, ForeignKey
+from sqlalchemy.orm import relationship
+
+from database.db import Base
+
+log = logging.getLogger(__name__)
+logging.basicConfig(level=logging.INFO)
+
+
+class User(Base):
+    __tablename__ = "users"
+    id = Column(Integer, primary_key=True, index=True)
+    username = Column(String(128), unique=True, nullable=True)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+
+
+class InterviewSession(Base):
+    __tablename__ = "interview_sessions"
+    id = Column(Integer, primary_key=True, index=True)
+    session_id = Column(String(64), unique=True, index=True, nullable=False)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+
+    # relationship to answers
+    answers = relationship("AnswerResult", back_populates="session")
+
+
+class AnswerResult(Base):
+    __tablename__ = "answer_results"
+    id = Column(Integer, primary_key=True, index=True)
+    session_id = Column(String(64), ForeignKey("interview_sessions.session_id"), index=True, nullable=False)
+    question = Column(Text, nullable=True)
+    score = Column(Float, nullable=False, default=0.0)
+    feedback = Column(Text, nullable=True)  # JSON encoded list
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+
+    session = relationship("InterviewSession", back_populates="answers")
+
+    def set_feedback(self, fb_list: Optional[list]) -> None:
+        try:
+            self.feedback = json.dumps(fb_list or [])
+        except Exception:
+            self.feedback = json.dumps([])
+
+    def get_feedback(self) -> list:
+        try:
+            return json.loads(self.feedback) if self.feedback else []
+        except Exception:
+            return []
+
+
+if __name__ == "__main__":
+    # Quick check - create tables
+    from database.db import init_db
+
+    init_db()
+    log.info("Models created")
