@@ -1,12 +1,5 @@
 from __future__ import annotations
 
-"""Storage manager utilities for AI Interview Trainer.
-
-Provides safe, production-oriented helpers to store uploaded files under
-the repository's `storage/video/` directory. Uses pathlib and atomic
-write semantics to avoid partial-file visibility.
-"""
-
 import logging
 import tempfile
 import uuid

@@ -6,10 +6,15 @@ import logging
 from typing import Optional
 
 from fastapi import APIRouter, HTTPException
+from fastapi import UploadFile, File
 from pydantic import BaseModel
 
 from interview_engine.interview_manager import InterviewManager
 from database import crud
+
+# Upload analysis
+from utils.storage_manager import save_video, generate_filename
+from pipelines.inference_pipeline import run_inference
 
 log = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
@@ -85,3 +90,41 @@ def finish_interview(req: FinishRequest):
         log.exception("Failed to fetch session from DB")
         db_summary = None
     return {"summary": summary, "db": db_summary}
+
+
+
+@router.post("/analyze/upload")
+async def analyze_upload(file: UploadFile = File(...)):
+    """Upload a video file, save it to storage, run the inference pipeline, and return the result.
+
+    This endpoint is async only to efficiently receive the file bytes from FastAPI; saving and
+    inference run are synchronous operations to keep the pipeline behavior unchanged.
+    """
+    # Read upload content
+    try:
+        content = await file.read()
+    except Exception as exc:
+        log.error("Failed to read uploaded file: %s", exc, exc_info=True)
+        raise HTTPException(status_code=400, detail="Failed to read uploaded file")
+
+    log.info("File uploaded: %s (%d bytes)", getattr(file, "filename", "<unknown>"), len(content) if content is not None else 0)
+
+    # Generate safe filename and save
+    name = generate_filename("mp4")
+    try:
+        saved_path = save_video(content, name)
+    except Exception as exc:
+        log.error("Failed to save uploaded file: %s", exc, exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to save uploaded file")
+
+    log.info("Saved file: %s", saved_path)
+
+    # Run inference synchronously (keeps existing pipeline semantics)
+    try:
+        result = run_inference(str(saved_path))
+    except Exception as exc:
+        log.error("Inference failed for %s: %s", saved_path, exc, exc_info=True)
+        raise HTTPException(status_code=500, detail="Inference failed")
+
+    log.info("Inference done for file: %s", saved_path)
+    return result
