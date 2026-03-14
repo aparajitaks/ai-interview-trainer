@@ -1,22 +1,3 @@
-"""Face detector module using OpenCV Haarcascade.
-
-This module provides a lightweight, classical face detector that returns
-bounding boxes for detected faces. Haarcascade is used because it is fast,
-doesn't require GPU or large DL models, and is suitable for an initial
-filtering stage in an interview-trainer pipeline where low-latency and
-simplicity are important.
-
-Functions:
-    load_face_detector(path=None) -> cv2.CascadeClassifier
-    detect_faces(frame, detector, scaleFactor=1.1, minNeighbors=5, minSize=(30,30)) -> List[Tuple[int,int,int,int]]
-    draw_faces(frame, boxes, color=(0,255,0), thickness=2) -> np.ndarray
-
-Test:
-    Run module as a script to annotate the first image found under
-    `storage/frames` (created by preprocessing) and write
-    `storage/frames/annotated_faces.jpg` with detections.
-"""
-
 from __future__ import annotations
 
 import logging
