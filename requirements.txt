@@ -24,7 +24,9 @@ librosa==0.10.1
 soundfile==0.12.1
 
 SpeechRecognition==3.10.1
-openai-whisper==20231117
+# openai-whisper==20231117
+# openai-whisper source builds can fail on macOS (missing build-time 'pkg_resources').
+# Install Whisper separately after preparing build tools or use conda. See WHISPER_INSTALL.md
 
 pyyaml==6.0.1
 
