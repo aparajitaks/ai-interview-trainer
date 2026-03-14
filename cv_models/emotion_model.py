@@ -27,7 +27,7 @@ EMOTION_SCORE_MAP = {
 _emotion_model = None
 
 
-def get_emotion_model(model_name: str = "nateraw/fer", device: Optional[int] = None):
+def get_emotion_model(model_name: str = "microsoft/resnet-50", device: Optional[int] = None):
     """Return a cached emotion model pipeline, loading it on first call."""
     global _emotion_model
     if _emotion_model is None:
@@ -49,7 +49,7 @@ def _to_rgb_image(face_img: np.ndarray) -> np.ndarray:
     return cv2.cvtColor(face_img, cv2.COLOR_BGR2RGB)
 
 
-def load_emotion_model(model_name: str = "nateraw/fer", device: Optional[int] = None):
+def load_emotion_model(model_name: str = "microsoft/resnet-50", device: Optional[int] = None):
     """Load a HuggingFace Transformers image-classification pipeline.
 
     Args:
@@ -188,7 +188,7 @@ def get_emotion_score(faces: Sequence[np.ndarray], model) -> Dict[str, Any]:
     return {"label": best_label, "confidence": float(mean_conf), "details": details}
 
 
-def test_main(frames_dir: str = "storage/frames", model_name: str = "nateraw/fer") -> None:
+def test_main(frames_dir: str = "storage/frames", model_name: str = "microsoft/resnet-50") -> None:
     """Headless test: detect first face, run emotion model and write annotated image."""
 
     try:
