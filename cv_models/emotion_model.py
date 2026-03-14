@@ -12,6 +12,11 @@ log = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
 
 
+# Allow overriding the default HF model via environment variable for runtime
+# flexibility in production/testing environments.
+DEFAULT_MODEL = os.getenv("EMOTION_MODEL", "microsoft/resnet-50")
+
+
 # Emotion score mapping to convert label -> heuristic score when helpful.
 EMOTION_SCORE_MAP = {
     "happy": 1.0,
@@ -27,7 +32,7 @@ EMOTION_SCORE_MAP = {
 _emotion_model = None
 
 
-def get_emotion_model(model_name: str = "microsoft/resnet-50", device: Optional[int] = None):
+def get_emotion_model(model_name: str = DEFAULT_MODEL, device: Optional[int] = None):
     """Return a cached emotion model pipeline, loading it on first call."""
     global _emotion_model
     if _emotion_model is None:
@@ -49,7 +54,7 @@ def _to_rgb_image(face_img: np.ndarray) -> np.ndarray:
     return cv2.cvtColor(face_img, cv2.COLOR_BGR2RGB)
 
 
-def load_emotion_model(model_name: str = "microsoft/resnet-50", device: Optional[int] = None):
+def load_emotion_model(model_name: str = DEFAULT_MODEL, device: Optional[int] = None):
     """Load a HuggingFace Transformers image-classification pipeline.
 
     Args:
@@ -188,7 +193,7 @@ def get_emotion_score(faces: Sequence[np.ndarray], model) -> Dict[str, Any]:
     return {"label": best_label, "confidence": float(mean_conf), "details": details}
 
 
-def test_main(frames_dir: str = "storage/frames", model_name: str = "microsoft/resnet-50") -> None:
+def test_main(frames_dir: str = "storage/frames", model_name: str = DEFAULT_MODEL) -> None:
     """Headless test: detect first face, run emotion model and write annotated image."""
 
     try:

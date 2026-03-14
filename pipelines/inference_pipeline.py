@@ -41,6 +41,16 @@ log = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
 
 
+# Default safe result to return on any early failure or empty input
+DEFAULT_RESULT = {
+    "emotion_score": 0.0,
+    "eye_score": 0.0,
+    "posture_score": 0.0,
+    "final_score": 0.0,
+    "feedback": [],
+}
+
+
 def _find_frames(dir_path: str) -> List[str]:
     patterns = ["*.jpg", "*.jpeg", "*.png"]
     files: List[str] = []
@@ -57,13 +67,7 @@ def run_inference(video_path: str, fps: int = 2) -> Dict[str, object]:
     """
     if not os.path.exists(video_path):
         log.error("Video not found: %s", video_path)
-        return {
-            "emotion_score": 0.0,
-            "eye_score": 0.0,
-            "posture_score": 0.0,
-            "final_score": 0.0,
-            "feedback": [],
-        }
+        return DEFAULT_RESULT.copy()
 
     tmp_dir = tempfile.mkdtemp(prefix="aiit_frames_")
     try:
@@ -74,13 +78,7 @@ def run_inference(video_path: str, fps: int = 2) -> Dict[str, object]:
         frame_paths = _find_frames(tmp_dir)
         if not frame_paths:
             log.error("No frames extracted from video: %s", video_path)
-            return {
-                "emotion_score": 0.0,
-                "eye_score": 0.0,
-                "posture_score": 0.0,
-                "final_score": 0.0,
-                "feedback": [],
-            }
+            return DEFAULT_RESULT.copy()
 
         # Prepare models/detectors
         try:
@@ -139,33 +137,47 @@ def run_inference(video_path: str, fps: int = 2) -> Dict[str, object]:
             if pose_detector is not None:
                 try:
                     landmarks = detect_pose(frame, pose_detector)
-                    if landmarks:
+                except Exception:
+                    log.exception("Pose detection failed on frame (detect_pose): %s", fp)
+                    landmarks = None
+
+                if landmarks:
+                    try:
                         ps = get_posture_score(landmarks)
                         # Clamp and append
                         ps = float(np.clip(ps, 0.0, 1.0))
-                        posture_scores.append(ps)
-                except Exception:
-                    log.exception("Pose detection failed on frame: %s", fp)
+                    except Exception:
+                        log.exception("Posture scoring failed on frame (get_posture_score): %s", fp)
+                        ps = 0.0
+                    posture_scores.append(ps)
 
-        # Compute eye score using face_pairs
-        try:
-            eye_score_raw = get_eye_contact_score(face_pairs)
-        except Exception:
-            log.exception("Eye contact computation failed")
+        # Compute eye score using face_pairs (safe fallback if no faces)
+        if not face_pairs:
+            log.debug("No face pairs collected; setting eye_score to 0.0")
             eye_score_raw = 0.0
+        else:
+            try:
+                eye_score_raw = get_eye_contact_score(face_pairs)
+            except Exception:
+                log.exception("Eye contact computation failed")
+                eye_score_raw = 0.0
 
-        # Compute emotion score using face crops and emotion_model
-        try:
-            emotion_score_raw = get_emotion_score(face_crops, emotion_model)
-            # get_emotion_score returns dict with label/confidence/details
-            if isinstance(emotion_score_raw, dict):
-                emotion_score_val = float(emotion_score_raw.get("confidence", 0.0))
-            else:
-                # For backward compat, allow direct float
-                emotion_score_val = float(emotion_score_raw or 0.0)
-        except Exception:
-            log.exception("Emotion scoring failed")
+        # Compute emotion score using face crops and emotion_model (safe fallback if no faces)
+        if not face_crops:
+            log.debug("No face crops collected; setting emotion_score to 0.0")
             emotion_score_val = 0.0
+        else:
+            try:
+                emotion_score_raw = get_emotion_score(face_crops, emotion_model)
+                # get_emotion_score returns dict with label/confidence/details
+                if isinstance(emotion_score_raw, dict):
+                    emotion_score_val = float(emotion_score_raw.get("confidence", 0.0))
+                else:
+                    # For backward compat, allow direct float
+                    emotion_score_val = float(emotion_score_raw or 0.0)
+            except Exception:
+                log.exception("Emotion scoring failed")
+                emotion_score_val = 0.0
 
         # Posture aggregation: mean of posture_scores
         posture_score_raw = float(np.mean(posture_scores)) if posture_scores else 0.0
