@@ -8,14 +8,15 @@ from __future__ import annotations
 
 import logging
 import os
+from config.settings import DB_PATH, LOG_LEVEL
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, declarative_base
 
 log = logging.getLogger(__name__)
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=LOG_LEVEL)
 
-# Database file location (in-repo). In production move to config/env.
-DB_PATH = os.environ.get("AIIT_DB_PATH", os.path.join(os.getcwd(), "storage", "ai_interview.db"))
+# Database file location (in-repo). Value comes from config.settings which
+# reads AIIT_DB_PATH or falls back to ./storage/ai_interview.db
 os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
 
 # SQLite engine. check_same_thread False for multi-threaded apps; safe here.

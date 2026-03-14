@@ -4,6 +4,7 @@ import logging
 import os
 import glob
 from typing import List, Tuple, Optional
+from config.settings import FRAME_DIR, LOG_LEVEL
 
 # Type alias for bounding box (x, y, w, h)
 BBox = Tuple[int, int, int, int]
@@ -29,7 +30,7 @@ import cv2
 import numpy as np
 
 log = logging.getLogger(__name__)
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=LOG_LEVEL)
 
 
 def load_face_detector(path: Optional[str] = None) -> cv2.CascadeClassifier:
@@ -139,12 +140,14 @@ def draw_faces(
     return out
 
 
-def _find_first_frame_dir(frames_dir: str = "storage/frames") -> Optional[str]:
+def _find_first_frame_dir(frames_dir: str = None) -> Optional[str]:
     """Helper to find a sample frame under the frames directory.
 
     Returns path to first image file found or None.
     """
 
+    if frames_dir is None:
+        frames_dir = FRAME_DIR
     patterns = ["*.jpg", "*.jpeg", "*.png"]
     for pattern in patterns:
         files = glob.glob(os.path.join(frames_dir, pattern))
@@ -154,7 +157,7 @@ def _find_first_frame_dir(frames_dir: str = "storage/frames") -> Optional[str]:
     return None
 
 
-def test_main(frames_dir: str = "storage/frames") -> None:
+def test_main(frames_dir: str = None) -> None:
     """Test function that runs the detector on a sample frame and writes output.
 
     The function is safe to run in headless environments: it writes an annotated

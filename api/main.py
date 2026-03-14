@@ -7,6 +7,7 @@ initializes shared components used by routes.
 from __future__ import annotations
 
 import logging
+from config.settings import LOG_LEVEL
 
 from fastapi import FastAPI
 
@@ -14,7 +15,7 @@ from api.routes import interview as interview_router
 from api.routes import results as results_router
 
 log = logging.getLogger(__name__)
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=LOG_LEVEL)
 
 
 def create_app() -> FastAPI:

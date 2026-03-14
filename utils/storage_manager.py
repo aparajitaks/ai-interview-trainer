@@ -7,9 +7,10 @@ from datetime import datetime
 from pathlib import Path
 from typing import Union
 
+from config.settings import STORAGE_DIR, LOG_LEVEL
 
 log = logging.getLogger(__name__)
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=LOG_LEVEL)
 
 
 def get_storage_dir() -> Path:
@@ -19,8 +20,8 @@ def get_storage_dir() -> Path:
     ./storage/video. This function creates the directory if it does not
     exist.
     """
-    repo_root = Path(__file__).resolve().parents[1]
-    storage_dir = repo_root / "storage" / "video"
+    # STORAGE_DIR from config can be absolute or relative; resolve and create
+    storage_dir = Path(STORAGE_DIR).resolve()
     try:
         storage_dir.mkdir(parents=True, exist_ok=True)
     except Exception:

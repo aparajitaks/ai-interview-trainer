@@ -8,14 +8,16 @@ is intentionally synchronous and headless for easy testing.
 from __future__ import annotations
 
 import logging
+import os
 from typing import Dict, Any, Optional
 
 from interview_engine.question_generator import QuestionGenerator
 from interview_engine.session_manager import SessionManager
 from pipelines.inference_pipeline import run_inference
+from config.settings import STORAGE_DIR, LOG_LEVEL
 
 log = logging.getLogger(__name__)
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=LOG_LEVEL)
 
 
 class InterviewManager:
@@ -63,7 +65,7 @@ def test_flow() -> None:
     log.info("Started session: %s; first question: %s", sid, info.get("first_question"))
 
     # NOTE: For a real run replace the sample path below with a real video.
-    sample_video = "storage/video/sample.mp4"
+    sample_video = os.path.join(STORAGE_DIR, "sample.mp4")
     # The following will run the inference pipeline which may download models.
     try:
         im.process_answer(sid, sample_video)

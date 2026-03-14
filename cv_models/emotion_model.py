@@ -8,13 +8,14 @@ import glob
 import cv2
 import numpy as np
 
+from config.settings import EMOTION_MODEL, FRAME_DIR
+
 log = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
 
 
-# Allow overriding the default HF model via environment variable for runtime
-# flexibility in production/testing environments.
-DEFAULT_MODEL = os.getenv("EMOTION_MODEL", "microsoft/resnet-50")
+# Default HF model (configurable via environment)
+DEFAULT_MODEL = EMOTION_MODEL
 
 
 # Emotion score mapping to convert label -> heuristic score when helpful.
@@ -194,9 +195,10 @@ def get_emotion_score(faces: Sequence[np.ndarray], model) -> Dict[str, Any]:
     return {"label": best_label, "confidence": float(mean_conf), "details": details}
 
 
-def test_main(frames_dir: str = "storage/frames", model_name: str = DEFAULT_MODEL) -> None:
+def test_main(frames_dir: str = None, model_name: str = DEFAULT_MODEL) -> None:
     """Headless test: detect first face, run emotion model and write annotated image."""
-
+    if frames_dir is None:
+        frames_dir = FRAME_DIR
     try:
         from cv_models.face_detector import load_face_detector, detect_faces
     except Exception:

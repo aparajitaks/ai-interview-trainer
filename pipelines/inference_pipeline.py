@@ -23,6 +23,8 @@ import tempfile
 import shutil
 from typing import Dict, List
 
+from config.settings import STORAGE_DIR, LOG_LEVEL
+
 import cv2
 import numpy as np
 
@@ -38,7 +40,7 @@ from evaluation import scoring as eval_scoring
 from evaluation import feedback_engine
 
 log = logging.getLogger(__name__)
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=LOG_LEVEL)
 
 
 # Default safe result to return on any early failure or empty input
@@ -239,6 +241,6 @@ def run_inference(video_path: str, fps: int = 2) -> Dict[str, object]:
 
 if __name__ == "__main__":
     # Simple command-line test. Update the path below to a small sample video.
-    sample_video = "storage/video/sample.mp4"
+    sample_video = os.path.join(STORAGE_DIR, "sample.mp4")
     res = run_inference(sample_video)
     log.info("Run complete. Result: %s", res)
