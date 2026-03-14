@@ -5,3 +5,7 @@ tests
 *.pyc
 *.db
 .env
+
+# Don't include uploaded videos or the SQLite DB in the image layer
+storage/video/*
+storage/ai_interview.db
