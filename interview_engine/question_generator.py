@@ -23,9 +23,53 @@ DEFAULT_QUESTIONS: List[str] = [
 ]
 
 
+ROLE_QUESTIONS = {
+    "frontend": [
+        "Describe your experience building responsive UIs.",
+        "How do you optimize web performance?",
+        "Explain CSS specificity and how you manage styles at scale.",
+        "How do you approach accessibility (a11y) in your projects?",
+        "Which frontend frameworks have you used and why?",
+    ],
+    "backend": [
+        "Describe a scalable backend system you've designed.",
+        "How do you ensure data consistency in distributed systems?",
+        "Explain how you approach API versioning and migration.",
+        "What strategies do you use for caching and performance?",
+        "How do you secure services and manage secrets?",
+    ],
+    "ml": [
+        "Describe a machine learning project you led end-to-end.",
+        "How do you evaluate model performance and avoid overfitting?",
+        "Explain how you would deploy a model to production.",
+        "What data preprocessing steps do you commonly use?",
+        "How do you monitor model drift and maintain models in prod?",
+    ],
+}
+
+
 class QuestionGenerator:
-    def __init__(self, questions: Optional[List[str]] = None) -> None:
-        self._questions = list(questions or DEFAULT_QUESTIONS)
+    def __init__(self, role: Optional[str] = None, questions: Optional[List[str]] = None) -> None:
+        """Create a QuestionGenerator.
+
+        Backwards-compatible: callers may still pass a list via `questions`.
+        If `questions` is provided it takes precedence. Otherwise, if `role`
+        is provided and matches an entry in `ROLE_QUESTIONS` we use that set
+        and log the selection. If neither is provided we fall back to
+        `DEFAULT_QUESTIONS`.
+        """
+        if questions:
+            self._questions = list(questions)
+        elif role:
+            qs = ROLE_QUESTIONS.get(role.lower())
+            if qs is None:
+                log.info("Role '%s' not recognized, falling back to default questions", role)
+                self._questions = list(DEFAULT_QUESTIONS)
+            else:
+                log.info("Role selected: %s", role)
+                self._questions = list(qs)
+        else:
+            self._questions = list(DEFAULT_QUESTIONS)
         self._index = 0
 
     def next_question(self) -> Optional[str]:
