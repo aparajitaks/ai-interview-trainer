@@ -1,11 +1,3 @@
-"""SQLAlchemy models for AI Interview Trainer.
-
-Tables:
-- User: optional user table for future use
-- InterviewSession: represents an interview session (session_id uuid)
-- AnswerResult: per-question inference result linked to a session
-"""
-
 from __future__ import annotations
 
 import logging
