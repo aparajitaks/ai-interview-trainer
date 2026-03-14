@@ -15,8 +15,6 @@ from fastapi import FastAPI
 from api.routes import interview as interview_router
 from api.routes import results as results_router
 from api.routes import health as health_router
-from ai_models.model_loader import get_emotion_model, get_pose_model, get_gaze_model
-from cv_models.gaze_detector import load_gaze_detector
 import os
 
 log = get_logger(__name__)
@@ -33,6 +31,8 @@ def create_app() -> FastAPI:
     # Log startup configuration for observability
     @app.on_event("startup")
     def _log_startup():
+        # Print to stdout for quick visibility in container logs / consoles
+        print("Starting AI Interview Trainer API")
         log.info("Starting AI Interview Trainer API")
         log.info("LOG_LEVEL=%s", LOG_LEVEL)
         log.info("DB_PATH=%s", DB_PATH)
@@ -44,7 +44,12 @@ def create_app() -> FastAPI:
         try:
             preload = os.getenv("AIIT_PRELOAD_MODELS", "false").lower() in ("1", "true", "yes")
             if preload:
+                # Import model loaders lazily to avoid import-time failures on
+                # platforms where optional native packages (MediaPipe/Torch)
+                # may not be available.
                 try:
+                    from ai_models.model_loader import get_emotion_model
+
                     em = get_emotion_model()
                     app.state.model_status["emotion"] = "loaded" if em is not None else "failed"
                     log.info("Emotion model preload status: %s", app.state.model_status["emotion"])
@@ -53,6 +58,8 @@ def create_app() -> FastAPI:
                     app.state.model_status["emotion"] = "failed"
 
                 try:
+                    from ai_models.model_loader import get_pose_model
+
                     p = get_pose_model()
                     app.state.model_status["pose"] = "loaded" if p is not None else "failed"
                     log.info("Pose model preload status: %s", app.state.model_status["pose"])
@@ -61,7 +68,9 @@ def create_app() -> FastAPI:
                     app.state.model_status["pose"] = "failed"
 
                 try:
-                    # Gaze detector has a loader function
+                    # Gaze detector has a loader function in cv_models; import lazily
+                    from cv_models.gaze_detector import load_gaze_detector
+
                     g = load_gaze_detector()
                     app.state.model_status["gaze"] = "loaded" if g is not None else "failed"
                     log.info("Gaze detector preload status: %s", app.state.model_status["gaze"])
