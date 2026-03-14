@@ -227,6 +227,16 @@ def run_inference(video_path: str, fps: int = 2) -> Dict[str, object]:
             "feedback": feedback,
         }
 
+        # Validate result contains all required keys. If any are missing,
+        # return a safe DEFAULT_RESULT to avoid downstream KeyError or
+        # schema mismatches. This preserves existing behavior while
+        # guarding against regressions in the downstream model functions.
+        required_keys = {"emotion_score", "eye_score", "posture_score", "final_score", "feedback"}
+        if not required_keys.issubset(set(result.keys())):
+            missing = required_keys - set(result.keys())
+            log.error("Inference result missing keys: %s. Returning DEFAULT_RESULT", missing)
+            return DEFAULT_RESULT.copy()
+
         log.info("Inference result: %s", result)
         return result
 
