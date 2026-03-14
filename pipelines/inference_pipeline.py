@@ -39,6 +39,7 @@ from cv_models.gaze_detector import get_gaze_score
 from cv_models.posture_scorer import compute_posture_score
 
 from evaluation import advanced_scoring
+from evaluation.feedback_generator import generate_feedback
 
 log = logging.getLogger(__name__)
 logging.basicConfig(level=LOG_LEVEL)
@@ -221,8 +222,16 @@ def run_inference(video_path: str, fps: int = 2) -> Dict[str, object]:
             final = 0.0
 
         # Feedback
-        # Feedback: keep simple list for now
-        feedback = []
+        try:
+            feedback = generate_feedback(
+                float(np.clip(emotion_score_val, 0.0, 1.0)),
+                float(np.clip(eye_score_raw, 0.0, 1.0)),
+                float(np.clip(posture_score_raw, 0.0, 1.0)),
+                float(np.clip(final, 0.0, 1.0)),
+            )
+        except Exception:
+            log.exception("Feedback generation failed; returning empty feedback list")
+            feedback = []
         result = {
             "emotion_score": float(np.clip(emotion_score_val, 0.0, 1.0)),
             "eye_score": float(np.clip(eye_score_raw, 0.0, 1.0)),
