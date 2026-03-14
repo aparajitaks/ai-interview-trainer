@@ -43,55 +43,73 @@ class FinishRequest(BaseModel):
 
 @router.post("/start", response_model=StartResponse)
 def start_interview():
-    info = IM.start_interview()
-    # Persist session in DB
     try:
-        crud.create_session(info["session_id"])
-    except Exception:
-        log.exception("Failed to persist session in DB")
-    return StartResponse(session_id=info["session_id"], first_question=info.get("first_question"))
+        info = IM.start_interview()
+        # Persist session in DB
+        try:
+            crud.create_session(info["session_id"])
+        except Exception:
+            log.exception("Failed to persist session in DB")
+        return StartResponse(session_id=info["session_id"], first_question=info.get("first_question"))
+    except HTTPException:
+        raise
+    except Exception as exc:
+        log.exception("Unhandled error in start_interview: %s", exc)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @router.post("/answer")
 def submit_answer(req: AnswerRequest):
-    # Get current question before processing so we can persist the question text
-    session_id = req.session_id
-    current_q = IM._sm.get_current_question(session_id)
-    if current_q is None:
-        raise HTTPException(status_code=404, detail="Session not found or no current question")
-
-    # Process the video (runs inference and stores in session manager)
     try:
-        sess = IM.process_answer(session_id, req.video_path)
+        # Get current question before processing so we can persist the question text
+        session_id = req.session_id
+        current_q = IM._sm.get_current_question(session_id)
+        if current_q is None:
+            raise HTTPException(status_code=404, detail="Session not found or no current question")
+
+        # Process the video (runs inference and stores in session manager)
+        try:
+            sess = IM.process_answer(session_id, req.video_path)
+        except Exception as exc:
+            log.exception("Processing answer failed: %s", exc)
+            raise HTTPException(status_code=500, detail="Processing failed")
+
+        # Persist the answer into DB
+        try:
+            # inference result is last appended answer
+            last_answer = sess.get("answers", [])[-1] if sess else None
+            final_score = float(last_answer.get("final_score", 0.0)) if last_answer else 0.0
+            feedback = last_answer.get("feedback", []) if last_answer else []
+            crud.save_answer(session_id, current_q, final_score, feedback)
+        except Exception:
+            log.exception("Failed to persist answer to DB for session=%s", session_id)
+
+        return {"status": "ok", "session": sess}
+    except HTTPException:
+        raise
     except Exception as exc:
-        log.exception("Processing answer failed: %s", exc)
-        raise HTTPException(status_code=500, detail="Processing failed")
-
-    # Persist the answer into DB
-    try:
-        # inference result is last appended answer
-        last_answer = sess.get("answers", [])[-1] if sess else None
-        final_score = float(last_answer.get("final_score", 0.0)) if last_answer else 0.0
-        feedback = last_answer.get("feedback", []) if last_answer else []
-        crud.save_answer(session_id, current_q, final_score, feedback)
-    except Exception:
-        log.exception("Failed to persist answer to DB for session=%s", session_id)
-
-    return {"status": "ok", "session": sess}
+        log.exception("Unhandled error in submit_answer: %s", exc)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @router.post("/finish")
 def finish_interview(req: FinishRequest):
-    summary = IM.finish_interview(req.session_id)
-    if summary is None:
-        raise HTTPException(status_code=404, detail="Session not found")
-    # Optionally return stored DB representation
     try:
-        db_summary = crud.get_session(req.session_id)
-    except Exception:
-        log.exception("Failed to fetch session from DB")
-        db_summary = None
-    return {"summary": summary, "db": db_summary}
+        summary = IM.finish_interview(req.session_id)
+        if summary is None:
+            raise HTTPException(status_code=404, detail="Session not found")
+        # Optionally return stored DB representation
+        try:
+            db_summary = crud.get_session(req.session_id)
+        except Exception:
+            log.exception("Failed to fetch session from DB")
+            db_summary = None
+        return {"summary": summary, "db": db_summary}
+    except HTTPException:
+        raise
+    except Exception as exc:
+        log.exception("Unhandled error in finish_interview: %s", exc)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 
@@ -102,48 +120,54 @@ async def analyze_upload(file: UploadFile = File(...)):
     This endpoint is async only to efficiently receive the file bytes from FastAPI; saving and
     inference run are synchronous operations to keep the pipeline behavior unchanged.
     """
-    # Read upload content
     try:
-        content = await file.read()
+        # Read upload content
+        try:
+            content = await file.read()
+        except Exception as exc:
+            log.error("Failed to read uploaded file: %s", exc, exc_info=True)
+            raise HTTPException(status_code=400, detail="Failed to read uploaded file")
+
+        log.info("File uploaded: %s (%d bytes)", getattr(file, "filename", "<unknown>"), len(content) if content is not None else 0)
+
+        # Generate safe filename and save
+        name = generate_filename("mp4")
+        try:
+            saved_path = save_video(content, name)
+        except Exception as exc:
+            log.error("Failed to save uploaded file: %s", exc, exc_info=True)
+            raise HTTPException(status_code=500, detail="Failed to save uploaded file")
+
+        log.info("Saved file: %s", saved_path)
+
+        # Run inference synchronously (keeps existing pipeline semantics)
+        try:
+            result = run_inference(str(saved_path))
+        except Exception as exc:
+            log.error("Inference failed for %s: %s", saved_path, exc, exc_info=True)
+            raise HTTPException(status_code=500, detail="Inference failed")
+
+        log.info("Inference done for file: %s", saved_path)
+
+        # Create a new session for this upload and persist the answer in DB
+        session_id = str(uuid4())
+        try:
+            create_session(session_id)
+            log.info("Created DB session for upload: %s", session_id)
+        except Exception as exc:
+            log.error("Failed to create DB session for upload %s: %s", session_id, exc, exc_info=True)
+
+        try:
+            final_score = float(result.get("final_score", 0.0)) if isinstance(result, dict) else 0.0
+            feedback = result.get("feedback", []) if isinstance(result, dict) else []
+            save_answer(session_id, "upload", final_score, feedback)
+            log.info("Saved upload answer for session=%s score=%.3f", session_id, final_score)
+        except Exception as exc:
+            log.error("Failed to save upload answer for session=%s: %s", session_id, exc, exc_info=True)
+
+        return {"session_id": session_id, "result": result}
+    except HTTPException:
+        raise
     except Exception as exc:
-        log.error("Failed to read uploaded file: %s", exc, exc_info=True)
-        raise HTTPException(status_code=400, detail="Failed to read uploaded file")
-
-    log.info("File uploaded: %s (%d bytes)", getattr(file, "filename", "<unknown>"), len(content) if content is not None else 0)
-
-    # Generate safe filename and save
-    name = generate_filename("mp4")
-    try:
-        saved_path = save_video(content, name)
-    except Exception as exc:
-        log.error("Failed to save uploaded file: %s", exc, exc_info=True)
-        raise HTTPException(status_code=500, detail="Failed to save uploaded file")
-
-    log.info("Saved file: %s", saved_path)
-
-    # Run inference synchronously (keeps existing pipeline semantics)
-    try:
-        result = run_inference(str(saved_path))
-    except Exception as exc:
-        log.error("Inference failed for %s: %s", saved_path, exc, exc_info=True)
-        raise HTTPException(status_code=500, detail="Inference failed")
-
-    log.info("Inference done for file: %s", saved_path)
-
-    # Create a new session for this upload and persist the answer in DB
-    session_id = str(uuid4())
-    try:
-        create_session(session_id)
-        log.info("Created DB session for upload: %s", session_id)
-    except Exception as exc:
-        log.error("Failed to create DB session for upload %s: %s", session_id, exc, exc_info=True)
-
-    try:
-        final_score = float(result.get("final_score", 0.0)) if isinstance(result, dict) else 0.0
-        feedback = result.get("feedback", []) if isinstance(result, dict) else []
-        save_answer(session_id, "upload", final_score, feedback)
-        log.info("Saved upload answer for session=%s score=%.3f", session_id, final_score)
-    except Exception as exc:
-        log.error("Failed to save upload answer for session=%s: %s", session_id, exc, exc_info=True)
-
-    return {"session_id": session_id, "result": result}
+        log.exception("Unhandled error in analyze_upload: %s", exc)
+        raise HTTPException(status_code=500, detail="Internal server error")
