@@ -75,7 +75,7 @@ def load_emotion_model(model_name: str = DEFAULT_MODEL, device: Optional[int] = 
         from transformers import pipeline
         import torch
     except Exception as exc:  # pragma: no cover - environment dependent
-        log.exception("transformers or torch not available: %s", exc)
+        log.error("transformers or torch not available: %s", exc, exc_info=True)
         raise ImportError("transformers and torch are required for emotion model") from exc
 
     # Auto-select device if not provided
@@ -85,7 +85,7 @@ def load_emotion_model(model_name: str = DEFAULT_MODEL, device: Optional[int] = 
     try:
         model = pipeline("image-classification", model=model_name, device=device)
     except Exception as exc:  # pragma: no cover - model download/runtime dependent
-        log.exception("Failed to initialize transformers pipeline: %s", exc)
+        log.error("Failed to initialize transformers pipeline: %s", exc, exc_info=True)
         raise RuntimeError(
             "Failed to load emotion model pipeline. Ensure network access to "
             "download the model or that the model name is correct."
@@ -116,7 +116,7 @@ def predict_emotion(face_img: np.ndarray, model) -> Tuple[str, float]:
         try:
             model = get_emotion_model()
         except Exception:
-            log.exception("Failed to get emotion model; returning neutral")
+            log.error("Failed to get emotion model; returning neutral", exc_info=True)
             return "neutral", 0.0
 
     try:
@@ -129,7 +129,7 @@ def predict_emotion(face_img: np.ndarray, model) -> Tuple[str, float]:
     try:
         preds = model(rgb, top_k=1)
     except Exception as exc:
-        log.exception("Emotion model inference failed: %s", exc)
+        log.error("Emotion model inference failed: %s", exc, exc_info=True)
         return "error", 0.0
 
     if not preds:
@@ -173,6 +173,7 @@ def get_emotion_score(faces: Sequence[np.ndarray], model) -> Dict[str, Any]:
         try:
             label, score = predict_emotion(face, model)
         except Exception:
+            log.error("predict_emotion raised an exception for a face; defaulting to error/0.0", exc_info=True)
             label, score = "error", 0.0
 
         # Ensure score is clamped and use mapping consistency

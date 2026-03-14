@@ -84,19 +84,19 @@ def run_inference(video_path: str, fps: int = 2) -> Dict[str, object]:
         try:
             face_detector = load_face_detector()
         except Exception:
-            log.exception("Failed to load face detector")
+            log.error("Failed to load face detector", exc_info=True)
             face_detector = None
 
         try:
             pose_detector = load_pose_detector()
         except Exception:
-            log.exception("Failed to load pose detector")
+            log.error("Failed to load pose detector", exc_info=True)
             pose_detector = None
 
         try:
             emotion_model = get_emotion_model()
         except Exception:
-            log.exception("Failed to load emotion model")
+            log.error("Failed to load emotion model", exc_info=True)
             emotion_model = None
 
         # Accumulators
@@ -138,7 +138,7 @@ def run_inference(video_path: str, fps: int = 2) -> Dict[str, object]:
                 try:
                     landmarks = detect_pose(frame, pose_detector)
                 except Exception:
-                    log.exception("Pose detection failed on frame (detect_pose): %s", fp)
+                    log.error("Pose detection failed on frame (detect_pose): %s", fp, exc_info=True)
                     landmarks = None
 
                 if landmarks:
@@ -147,7 +147,7 @@ def run_inference(video_path: str, fps: int = 2) -> Dict[str, object]:
                         # Clamp and append
                         ps = float(np.clip(ps, 0.0, 1.0))
                     except Exception:
-                        log.exception("Posture scoring failed on frame (get_posture_score): %s", fp)
+                        log.error("Posture scoring failed on frame (get_posture_score): %s", fp, exc_info=True)
                         ps = 0.0
                     posture_scores.append(ps)
 
@@ -159,7 +159,7 @@ def run_inference(video_path: str, fps: int = 2) -> Dict[str, object]:
             try:
                 eye_score_raw = get_eye_contact_score(face_pairs)
             except Exception:
-                log.exception("Eye contact computation failed")
+                log.error("Eye contact computation failed", exc_info=True)
                 eye_score_raw = 0.0
 
         # Compute emotion score using face crops and emotion_model (safe fallback if no faces)
@@ -176,11 +176,30 @@ def run_inference(video_path: str, fps: int = 2) -> Dict[str, object]:
                     # For backward compat, allow direct float
                     emotion_score_val = float(emotion_score_raw or 0.0)
             except Exception:
-                log.exception("Emotion scoring failed")
+                log.error("Emotion scoring failed", exc_info=True)
                 emotion_score_val = 0.0
 
         # Posture aggregation: mean of posture_scores
         posture_score_raw = float(np.mean(posture_scores)) if posture_scores else 0.0
+
+        # Clamp raw metrics to [0,1] to ensure numeric stability
+        try:
+            emotion_score_val = float(np.clip(emotion_score_val, 0.0, 1.0))
+        except Exception:
+            log.error("Failed to clamp emotion_score_val; defaulting to 0.0", exc_info=True)
+            emotion_score_val = 0.0
+
+        try:
+            eye_score_raw = float(np.clip(eye_score_raw, 0.0, 1.0))
+        except Exception:
+            log.error("Failed to clamp eye_score_raw; defaulting to 0.0", exc_info=True)
+            eye_score_raw = 0.0
+
+        try:
+            posture_score_raw = float(np.clip(posture_score_raw, 0.0, 1.0))
+        except Exception:
+            log.error("Failed to clamp posture_score_raw; defaulting to 0.0", exc_info=True)
+            posture_score_raw = 0.0
 
         # Normalize metrics via evaluation.metrics
         emotion_metric = eval_metrics.compute_emotion_metric(emotion_score_val)
@@ -189,6 +208,11 @@ def run_inference(video_path: str, fps: int = 2) -> Dict[str, object]:
 
         # Final scoring
         final = eval_scoring.compute_final_score(emotion_metric, eye_metric, posture_metric)
+        try:
+            final = float(np.clip(final, 0.0, 1.0))
+        except Exception:
+            log.error("Failed to clamp final score; defaulting to 0.0", exc_info=True)
+            final = 0.0
 
         # Feedback
         feedback = feedback_engine.generate_feedback(emotion_metric, eye_metric, posture_metric)
