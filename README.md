@@ -130,6 +130,17 @@ docker run --rm -p 8000:8000 \
 
 After the container starts the API will be reachable at http://localhost:8000 and the DB will be persisted in `./storage/ai_interview.db` on the host.
 
+Demo
+----
+
+There is a small demo script that runs the inference pipeline on a local video file and prints the resulting scores and feedback:
+
+```bash
+python scripts/run_demo.py storage/video/test.mp4
+```
+
+The script is defensive: it will report a missing file and will print a safe fallback result if the pipeline fails or if optional models are not available in the runtime.
+
 API endpoints (HTTP)
 --------------------
 - POST /interview/start
