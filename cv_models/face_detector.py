@@ -5,6 +5,26 @@ import os
 import glob
 from typing import List, Tuple, Optional
 
+# Type alias for bounding box (x, y, w, h)
+BBox = Tuple[int, int, int, int]
+
+# Simple module-level cache for the Haarcascade detector to avoid reloading
+# on every call in a pipeline.
+_face_detector: Optional[cv2.CascadeClassifier] = None
+
+
+def get_face_detector(path: Optional[str] = None) -> cv2.CascadeClassifier:
+    """Return a cached face detector, loading it once on first call.
+
+    This helper follows the pattern used across the CV modules: it calls
+    ``load_face_detector`` to perform the actual load and then caches the
+    returned object for subsequent calls.
+    """
+    global _face_detector
+    if _face_detector is None:
+        _face_detector = load_face_detector(path=path)
+    return _face_detector
+
 import cv2
 import numpy as np
 
@@ -47,7 +67,7 @@ def detect_faces(
     scaleFactor: float = 1.1,
     minNeighbors: int = 5,
     minSize: Tuple[int, int] = (30, 30),
-) -> List[Tuple[int, int, int, int]]:
+) -> List[BBox]:
     """Detect faces in an image frame.
 
     Args:
@@ -75,7 +95,7 @@ def detect_faces(
     )
 
     # Ensure we always return a list of tuples for consistency
-    boxes: List[Tuple[int, int, int, int]] = []
+    boxes: List[BBox] = []
     if rects is None:
         return boxes
 

@@ -12,8 +12,36 @@ log = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
 
 
+# Emotion score mapping to convert label -> heuristic score when helpful.
+EMOTION_SCORE_MAP = {
+    "happy": 1.0,
+    "neutral": 0.7,
+    "surprise": 0.8,
+    "sad": 0.3,
+    "angry": 0.2,
+    "fear": 0.2,
+    "disgust": 0.1,
+}
+
+# Module-level cache for the transformers pipeline
+_emotion_model = None
+
+
+def get_emotion_model(model_name: str = "nateraw/fer", device: Optional[int] = None):
+    """Return a cached emotion model pipeline, loading it on first call."""
+    global _emotion_model
+    if _emotion_model is None:
+        _emotion_model = load_emotion_model(model_name=model_name, device=device)
+    return _emotion_model
+
+
 def _to_rgb_image(face_img: np.ndarray) -> np.ndarray:
-    """Convert a BGR numpy image to RGB numpy image expected by transformers."""
+    """Convert a BGR numpy image to RGB numpy image expected by transformers.
+
+    The helper accepts only valid numpy images. Callers should guard None
+    inputs and handle exceptions. We intentionally keep the function strict to
+    surface invalid input types early.
+    """
     if face_img is None:
         raise ValueError("face_img must be a valid numpy array")
     if face_img.dtype != np.uint8:
@@ -74,14 +102,30 @@ def predict_emotion(face_img: np.ndarray, model) -> Tuple[str, float]:
         Tuple of (label, confidence) where confidence is a float in [0,1].
     """
 
-    rgb = _to_rgb_image(face_img)
+    # Defensive: if face image is missing, return a neutral baseline
+    if face_img is None:
+        return "neutral", 0.0
+
+    # If caller didn't pass a model, try to use cached loader
+    if model is None:
+        try:
+            model = get_emotion_model()
+        except Exception:
+            log.exception("Failed to get emotion model; returning neutral")
+            return "neutral", 0.0
+
+    try:
+        rgb = _to_rgb_image(face_img)
+    except Exception:
+        log.exception("Invalid face_img passed to predict_emotion")
+        return "neutral", 0.0
 
     # transformers pipelines accept PIL images or numpy arrays in RGB.
     try:
         preds = model(rgb, top_k=1)
     except Exception as exc:
         log.exception("Emotion model inference failed: %s", exc)
-        raise
+        return "error", 0.0
 
     if not preds:
         return "unknown", 0.0
@@ -89,6 +133,11 @@ def predict_emotion(face_img: np.ndarray, model) -> Tuple[str, float]:
     top = preds[0]
     label = str(top.get("label", "unknown"))
     score = float(top.get("score", 0.0))
+
+    # Apply heuristic mapping when available, falling back to model score
+    label_key = label.lower()
+    mapped = EMOTION_SCORE_MAP.get(label_key, score)
+    score = float(np.clip(mapped, 0.0, 1.0))
     return label, score
 
 
@@ -121,6 +170,8 @@ def get_emotion_score(faces: Sequence[np.ndarray], model) -> Dict[str, Any]:
         except Exception:
             label, score = "error", 0.0
 
+        # Ensure score is clamped and use mapping consistency
+        score = float(np.clip(score, 0.0, 1.0))
         details.append({"label": label, "score": score})
         totals[label] = totals.get(label, 0.0) + score
         counts[label] = counts.get(label, 0) + 1
@@ -132,6 +183,7 @@ def get_emotion_score(faces: Sequence[np.ndarray], model) -> Dict[str, Any]:
     best_label = max(totals.items(), key=lambda t: t[1])[0]
     # Mean confidence for this label
     mean_conf = totals[best_label] / counts[best_label]
+    mean_conf = float(np.clip(mean_conf, 0.0, 1.0))
 
     return {"label": best_label, "confidence": float(mean_conf), "details": details}
 
@@ -174,7 +226,7 @@ def test_main(frames_dir: str = "storage/frames", model_name: str = "nateraw/fer
     x, y, w, h = faces[0]
     face_crop = frame[y : y + h, x : x + w]
 
-    model = load_emotion_model(model_name=model_name)
+    model = get_emotion_model(model_name=model_name)
     label, confidence = predict_emotion(face_crop, model)
     log.info("Predicted emotion: %s (%.3f)", label, confidence)
 

@@ -8,6 +8,21 @@ from typing import List, Tuple, Optional, Sequence, Union
 import cv2
 import numpy as np
 
+# Bounding box alias
+BBox = Tuple[int, int, int, int]
+
+# Cache the eye cascade to avoid repeated disk loads in a pipeline
+_eye_cascade: Optional[cv2.CascadeClassifier] = None
+
+
+def get_eye_cascade(path: Optional[str] = None) -> cv2.CascadeClassifier:
+    """Return a cached eye cascade classifier (loads on first call)."""
+    global _eye_cascade
+    if _eye_cascade is None:
+        _eye_cascade = _load_eye_cascade(path)
+    return _eye_cascade
+
+
 from cv_models.face_detector import load_face_detector, detect_faces
 
 log = logging.getLogger(__name__)
@@ -32,7 +47,7 @@ def _load_eye_cascade(path: Optional[str] = None) -> cv2.CascadeClassifier:
     return cascade
 
 
-def estimate_eye_contact(frame: np.ndarray, face_box: Tuple[int, int, int, int]) -> float:
+def estimate_eye_contact(frame: np.ndarray, face_box: BBox) -> float:
     """Estimate an eye-contact score for a single face in a frame.
 
     Heuristic summary:
@@ -49,6 +64,10 @@ def estimate_eye_contact(frame: np.ndarray, face_box: Tuple[int, int, int, int])
         float between 0.0 and 1.0 representing estimated eye contact.
     """
 
+    if frame is None:
+        log.debug("estimate_eye_contact called with None frame")
+        return 0.0
+
     x, y, w, h = face_box
     # Defensive clamps
     h_img, w_img = frame.shape[:2]
@@ -61,7 +80,7 @@ def estimate_eye_contact(frame: np.ndarray, face_box: Tuple[int, int, int, int])
     face_roi = frame[y1:y2, x1:x2]
     gray = cv2.cvtColor(face_roi, cv2.COLOR_BGR2GRAY)
 
-    eye_cascade = _load_eye_cascade()
+    eye_cascade = get_eye_cascade()
     # detectMultiScale parameters tuned for faces: scale small to find eyes
     eyes = eye_cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=3, minSize=(10, 10))
 
@@ -91,9 +110,11 @@ def estimate_eye_contact(frame: np.ndarray, face_box: Tuple[int, int, int, int])
         # is to the horizontal center of the face.
         ecx, ecy = eye_centers[0]
         horiz_offset = abs(ecx - face_cx) / (w / 2.0)
-        score = max(0.0, 1.0 - horiz_offset)
-        log.debug("Single eye score=%.3f (offset=%.3f)", score, horiz_offset)
-        return float(max(0.0, min(1.0, score)))
+    score = max(0.0, 1.0 - horiz_offset)
+    log.debug("Single eye score=%.3f (offset=%.3f)", score, horiz_offset)
+    # Clamp for pipeline safety
+    score = float(np.clip(score, 0.0, 1.0))
+    return score
 
     # Two eyes: compute midpoint and tilt
     (x1c, y1c), (x2c, y2c) = eye_centers[0], eye_centers[1]
@@ -119,13 +140,15 @@ def estimate_eye_contact(frame: np.ndarray, face_box: Tuple[int, int, int, int])
     # Combine scores multiplicatively to penalize any strong deviation
     score = offset_score * angle_score * dist_score
     score = float(max(0.0, min(1.0, score)))
+    # Final clamp to ensure score is in [0,1]
+    score = float(np.clip(score, 0.0, 1.0))
     log.debug("eye_centers=%s offset_score=%.3f angle_score=%.3f dist_score=%.3f => score=%.3f",
               eye_centers, offset_score, angle_score, dist_score, score)
 
     return score
 
 
-def get_eye_contact_score(frames_or_pairs: Sequence[Union[np.ndarray, Tuple[np.ndarray, Tuple[int, int, int, int]]]], max_frames: int = 30) -> float:
+def get_eye_contact_score(frames_or_pairs: Sequence[Union[np.ndarray, Tuple[np.ndarray, BBox]]], max_frames: int = 30) -> float:
     """Aggregate eye-contact score over multiple frames.
 
     Accepts either a list of frames (will auto-detect faces using the face
@@ -141,7 +164,13 @@ def get_eye_contact_score(frames_or_pairs: Sequence[Union[np.ndarray, Tuple[np.n
     """
 
     # Prepare face detector for automatic face detection if needed
-    face_detector = load_face_detector()
+    # Prefer the cached face detector helper to avoid repeated loads
+    try:
+        from cv_models.face_detector import get_face_detector
+        face_detector = get_face_detector()
+    except Exception:
+        # Fallback to direct loader if helper is not available
+        face_detector = load_face_detector()
 
     scores: List[float] = []
     count = 0
@@ -154,6 +183,9 @@ def get_eye_contact_score(frames_or_pairs: Sequence[Union[np.ndarray, Tuple[np.n
             frame, face_box = item
         else:
             frame = item
+            if frame is None:
+                log.debug("Skipping None frame in get_eye_contact_score")
+                continue
             # auto-detect faces and take first
             faces = detect_faces(frame, face_detector)
             if not faces:
@@ -169,6 +201,8 @@ def get_eye_contact_score(frames_or_pairs: Sequence[Union[np.ndarray, Tuple[np.n
         return 0.0
 
     avg = float(sum(scores) / len(scores))
+    # Clamp aggregated score
+    avg = float(np.clip(avg, 0.0, 1.0))
     log.info("Computed eye-contact score over %d frames: %.3f", len(scores), avg)
     return avg
 
@@ -197,7 +231,11 @@ def test_main(frames_dir: str = "storage/frames") -> None:
         return
 
     # auto-detect face
-    face_detector = load_face_detector()
+    try:
+        from cv_models.face_detector import get_face_detector
+        face_detector = get_face_detector()
+    except Exception:
+        face_detector = load_face_detector()
     faces = detect_faces(frame, face_detector)
     if not faces:
         log.error("No faces detected in sample frame")

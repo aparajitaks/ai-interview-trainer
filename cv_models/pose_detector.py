@@ -1,29 +1,28 @@
-"""Pose detection module using MediaPipe Pose.
-
-This module provides a lightweight wrapper around MediaPipe's pose solution to
-extract human pose landmarks from BGR frames produced by the preprocessing
-pipeline. MediaPipe is used because it provides a reliable, fast, classical
-computer-vision-based landmark estimator (no custom deep-learning model to ship)
-and runs in CPU-only environments which fits the initial stages of the
-interview-trainer pipeline.
-
-Functions:
-    load_pose_detector() -> mediapipe.solutions.pose.Pose
-    detect_pose(frame, detector) -> List[dict]
-    draw_pose(frame, landmarks) -> np.ndarray
-    get_posture_score(landmarks) -> float
-
-The module includes a headless `test_main` which reads a frame from
-`storage/frames`, runs detection, writes an annotated file and logs a posture
-score. Uses logging, type hints and defensive checks for production readiness.
-"""
-
 from __future__ import annotations
 
 import logging
 import os
 import glob
 from typing import List, Dict, Optional, Tuple
+
+# Bounding box alias for consistency with other CV modules
+BBox = Tuple[int, int, int, int]
+
+# Module-level cache for the MediaPipe Pose detector
+_pose_detector = None
+
+
+def get_pose_detector(*, static_image_mode: bool = False, model_complexity: int = 1, enable_segmentation: bool = False):
+    """Return a cached MediaPipe Pose detector (loads on first call).
+
+    This wrapper follows the project's caching pattern: it calls
+    ``load_pose_detector`` and stores the resulting detector in a
+    module-level variable for reuse.
+    """
+    global _pose_detector
+    if _pose_detector is None:
+        _pose_detector = load_pose_detector(static_image_mode=static_image_mode, model_complexity=model_complexity, enable_segmentation=enable_segmentation)
+    return _pose_detector
 
 import cv2
 import numpy as np
@@ -236,6 +235,9 @@ def get_posture_score(landmarks: List[Dict[str, float]]) -> float:
     vis = [ls.get("visibility", 0.0), rs.get("visibility", 0.0), lh.get("visibility", 0.0), rh.get("visibility", 0.0)]
     visibility = sum(vis) / len(vis)
     final = float(score * visibility)
+
+    # Clamp final score to [0,1] for stability across the pipeline
+    final = float(np.clip(final, 0.0, 1.0))
     return final
 
 
