@@ -1,0 +1,13 @@
+version: '3.8'
+
+services:
+  app:
+    build: .
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./storage:/app/storage
+    environment:
+      # Ensure the SQLite DB file is placed inside the mounted storage volume
+      - AIIT_DB_PATH=/app/storage/ai_interview.db
+    restart: unless-stopped
