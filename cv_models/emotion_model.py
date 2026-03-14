@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+from utils.logger import get_logger
 from typing import Tuple, Sequence, Dict, Any, Optional
 
 import os
@@ -10,8 +11,7 @@ import numpy as np
 
 from config.settings import EMOTION_MODEL, FRAME_DIR
 
-log = logging.getLogger(__name__)
-logging.basicConfig(level=logging.INFO)
+log = get_logger(__name__)
 
 
 # Default HF model (configurable via environment)

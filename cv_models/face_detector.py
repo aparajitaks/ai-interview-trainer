@@ -1,10 +1,10 @@
 from __future__ import annotations
 
-import logging
 import os
 import glob
 from typing import List, Tuple, Optional
-from config.settings import FRAME_DIR, LOG_LEVEL
+from config.settings import FRAME_DIR
+from utils.logger import get_logger
 
 # Type alias for bounding box (x, y, w, h)
 BBox = Tuple[int, int, int, int]
@@ -29,8 +29,7 @@ def get_face_detector(path: Optional[str] = None) -> cv2.CascadeClassifier:
 import cv2
 import numpy as np
 
-log = logging.getLogger(__name__)
-logging.basicConfig(level=LOG_LEVEL)
+log = get_logger(__name__)
 
 
 def load_face_detector(path: Optional[str] = None) -> cv2.CascadeClassifier:

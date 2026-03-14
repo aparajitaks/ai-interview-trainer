@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+from utils.logger import get_logger
 from typing import Optional
 
 from fastapi import APIRouter, HTTPException
@@ -18,8 +19,7 @@ from database.crud import create_session, save_answer
 from utils.storage_manager import save_video, generate_filename
 from pipelines.inference_pipeline import run_inference
 
-log = logging.getLogger(__name__)
-logging.basicConfig(level=logging.INFO)
+log = get_logger(__name__)
 
 router = APIRouter()
 
