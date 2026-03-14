@@ -9,6 +9,12 @@ from __future__ import annotations
 import logging
 import os
 from typing import Final
+from dotenv import load_dotenv
+
+# Load .env file if present so environment variables can be provided via a
+# project-local .env during development. This is a no-op if no .env exists
+# and preserves existing behavior which uses os.getenv.
+load_dotenv()
 
 # Emotion model to use with the HF transformers pipeline
 EMOTION_MODEL: Final[str] = os.getenv("EMOTION_MODEL", "microsoft/resnet-50")
