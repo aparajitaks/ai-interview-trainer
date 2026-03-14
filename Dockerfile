@@ -19,6 +19,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Copy application code
 COPY . /app
 
+# Ensure storage directories exist inside container
+RUN mkdir -p /app/storage/video /app/storage/frames /app/storage && chown -R root:root /app/storage
+
 # Expose port for uvicorn
 EXPOSE 8000
 

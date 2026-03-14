@@ -112,6 +112,24 @@ docker-compose up --build
 
 2. The API will be available at http://localhost:8000. The SQLite database file will be created as `./storage/ai_interview.db` on the host because the compose file mounts `./storage` into the container.
 
+Build and run with Docker (no compose)
+------------------------------------
+
+If you don't want to use docker-compose you can build and run the image directly. The examples below mount the host `./storage` into the container so the SQLite DB and uploaded videos persist outside the image.
+
+```bash
+# build the image (run from project root)
+docker build -t ai-interview-trainer:latest .
+
+# run the container, mounting storage and exposing port 8000
+docker run --rm -p 8000:8000 \
+  -v "$PWD/storage":/app/storage \
+  -e AIIT_PRELOAD_MODELS=false \
+  ai-interview-trainer:latest
+```
+
+After the container starts the API will be reachable at http://localhost:8000 and the DB will be persisted in `./storage/ai_interview.db` on the host.
+
 API endpoints (HTTP)
 --------------------
 - POST /interview/start
