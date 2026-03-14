@@ -29,7 +29,7 @@ def _get_point(landmarks: Sequence, idx: int) -> Optional[np.ndarray]:
     except Exception:
         return None
 
-    # Named attributes
+    # Named attributes (object with .x/.y)
     x = None
     y = None
     try:
@@ -39,8 +39,17 @@ def _get_point(landmarks: Sequence, idx: int) -> Optional[np.ndarray]:
         x = None
         y = None
 
+    # Dict-style landmarks (e.g., from cv_models.pose_detector.detect_pose)
+    if (x is None or y is None) and isinstance(lm, dict):
+        try:
+            x = lm.get("x", None)
+            y = lm.get("y", None)
+        except Exception:
+            x = None
+            y = None
+
     if x is None or y is None:
-        # Sequence/array style
+        # Sequence/array style or tuple
         try:
             x = lm[0]
             y = lm[1]

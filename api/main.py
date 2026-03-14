@@ -15,6 +15,9 @@ from fastapi import FastAPI
 from api.routes import interview as interview_router
 from api.routes import results as results_router
 from api.routes import health as health_router
+from ai_models.model_loader import get_emotion_model, get_pose_model, get_gaze_model
+from cv_models.gaze_detector import load_gaze_detector
+import os
 
 log = get_logger(__name__)
 
@@ -35,6 +38,40 @@ def create_app() -> FastAPI:
         log.info("DB_PATH=%s", DB_PATH)
         log.info("STORAGE_DIR=%s", STORAGE_DIR)
         log.info("EMOTION_MODEL=%s", EMOTION_MODEL)
+
+        # Model preload/status (optional)
+        app.state.model_status = {"emotion": "not_loaded", "pose": "not_loaded", "gaze": "not_loaded"}
+        try:
+            preload = os.getenv("AIIT_PRELOAD_MODELS", "false").lower() in ("1", "true", "yes")
+            if preload:
+                try:
+                    em = get_emotion_model()
+                    app.state.model_status["emotion"] = "loaded" if em is not None else "failed"
+                    log.info("Emotion model preload status: %s", app.state.model_status["emotion"])
+                except Exception:
+                    log.exception("Emotion preload failed")
+                    app.state.model_status["emotion"] = "failed"
+
+                try:
+                    p = get_pose_model()
+                    app.state.model_status["pose"] = "loaded" if p is not None else "failed"
+                    log.info("Pose model preload status: %s", app.state.model_status["pose"])
+                except Exception:
+                    log.exception("Pose preload failed")
+                    app.state.model_status["pose"] = "failed"
+
+                try:
+                    # Gaze detector has a loader function
+                    g = load_gaze_detector()
+                    app.state.model_status["gaze"] = "loaded" if g is not None else "failed"
+                    log.info("Gaze detector preload status: %s", app.state.model_status["gaze"])
+                except Exception:
+                    log.exception("Gaze preload failed")
+                    app.state.model_status["gaze"] = "failed"
+            else:
+                log.info("Model preload disabled (AIIT_PRELOAD_MODELS not set)")
+        except Exception:
+            log.exception("Error during model preload/status setup")
 
     return app
 

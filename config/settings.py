@@ -28,6 +28,12 @@ DB_PATH: Final[str] = os.getenv("AIIT_DB_PATH", os.path.join(os.getcwd(), "stora
 # Directory for extracted frames (default: ./storage/frames)
 FRAME_DIR: Final[str] = os.getenv("AIIT_FRAME_DIR", os.path.join(os.getcwd(), "storage", "frames"))
 
+# Number of frames to sample from a video for scoring
+try:
+    SAMPLE_FRAMES: Final[int] = int(os.getenv("AIIT_SAMPLE_FRAMES", "5"))
+except Exception:
+    SAMPLE_FRAMES = 5
+
 # Logging level (string like 'INFO', 'DEBUG'). We convert to logging level int
 _LOG_LEVEL_NAME = os.getenv("AIIT_LOG_LEVEL", "INFO").upper()
 try:

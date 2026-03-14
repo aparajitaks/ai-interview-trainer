@@ -68,6 +68,38 @@ python -c "from database.db import init_db; init_db()"
 uvicorn api.main:app --host 127.0.0.1 --port 8000
 ```
 
+Environment variables
+---------------------
+The application supports additional environment variables to tune behavior:
+
+- AIIT_DB_PATH — path to SQLite DB file (default: ./storage/ai_interview.db)
+- AIIT_STORAGE_DIR — where uploaded videos are stored (default: ./storage/video)
+- AIIT_FRAME_DIR — frames extraction directory (default: ./storage/frames)
+- AIIT_LOG_LEVEL — logging level (INFO, DEBUG)
+- AIIT_INFERENCE_TIMEOUT — inference timeout in seconds (used by async wrapper)
+- AIIT_PRELOAD_MODELS — if true, preload models at startup (true/false)
+- AIIT_ROLE — role used by scoring logic (candidate, interviewer, etc.)
+- AIIT_ROLE_WEIGHT — optional role multiplier (float)
+- AIIT_SAMPLE_FRAMES — number of frames sampled from a video for scoring (default: 5)
+
+Running tests
+-------------
+Install pytest and run tests:
+
+```bash
+pip install pytest
+pytest -q
+```
+
+MediaPipe note
+--------------
+MediaPipe can be platform-sensitive (especially on macOS/arm64). If the
+pose detector fails to initialize, the API will still start but posture
+scoring will be disabled and the model status will report `failed` for
+`pose`. For reliable production runs prefer a compatible mediapipe wheel
+or run inside a Linux container where MediaPipe binary assets are known to
+work.
+
 Run with Docker
 ---------------
 This project includes a Dockerfile and docker-compose configuration for local containerized runs.

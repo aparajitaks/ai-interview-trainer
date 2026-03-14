@@ -19,7 +19,7 @@ from database.crud import create_session, save_answer
 
 # Upload analysis
 from utils.storage_manager import save_video, generate_filename
-from pipelines.inference_pipeline import run_inference
+from pipelines.async_pipeline import run_async
 
 # Timeout (seconds) for run_inference to prevent long blocking calls in the request handler.
 INFERENCE_TIMEOUT: int = int(os.getenv("AIIT_INFERENCE_TIMEOUT", "60"))
@@ -145,28 +145,15 @@ async def analyze_upload(file: UploadFile = File(...)):
 
         log.info("Saved file: %s", saved_path)
 
-        # Run inference synchronously with a safety timeout. We execute the
-        # potentially long-running `run_inference` call in a thread and wait
-        # for a bounded time so the request handler cannot hang indefinitely.
+        # Run inference asynchronously (wrapped) which handles timeouts and
+        # returns a safe fallback on failure. run_async runs inference in a
+        # background thread and returns the result dict.
         try:
-            with concurrent.futures.ThreadPoolExecutor(max_workers=1) as ex:
-                future = ex.submit(run_inference, str(saved_path))
-                try:
-                    result = future.result(timeout=INFERENCE_TIMEOUT)
-                except concurrent.futures.TimeoutError as exc:
-                    log.exception(
-                        "Inference timed out for %s after %s seconds: %s",
-                        saved_path,
-                        INFERENCE_TIMEOUT,
-                        exc,
-                    )
-                    raise HTTPException(status_code=500, detail="Inference timed out")
-        except HTTPException:
-            # Re-raise HTTP exceptions to be handled by outer handler
-            raise
-        except Exception as exc:
-            log.error("Inference failed for %s: %s", saved_path, exc, exc_info=True)
-            raise HTTPException(status_code=500, detail="Inference failed")
+            result = run_async(str(saved_path))
+        except Exception:
+            log.exception("Async inference failed for %s", saved_path)
+            # Return safe DEFAULT-like result
+            result = {"emotion_score": 0.0, "eye_score": 0.0, "posture_score": 0.0, "final_score": 0.0, "feedback": []}
 
         log.info("Inference done for file: %s", saved_path)
 
