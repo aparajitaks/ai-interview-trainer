@@ -13,6 +13,7 @@ from fastapi import FastAPI
 
 from api.routes import interview as interview_router
 from api.routes import results as results_router
+from api.routes import health as health_router
 
 log = logging.getLogger(__name__)
 logging.basicConfig(level=LOG_LEVEL)
@@ -24,6 +25,7 @@ def create_app() -> FastAPI:
     # Include routers
     app.include_router(interview_router.router, prefix="/interview", tags=["interview"])
     app.include_router(results_router.router, prefix="/results", tags=["results"])
+    app.include_router(health_router.router)
 
     return app
 
