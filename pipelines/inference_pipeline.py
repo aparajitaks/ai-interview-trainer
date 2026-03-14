@@ -40,6 +40,8 @@ from cv_models.posture_scorer import compute_posture_score
 
 from evaluation import advanced_scoring
 from evaluation.feedback_generator import generate_feedback
+import json
+from datetime import datetime
 
 log = logging.getLogger(__name__)
 logging.basicConfig(level=LOG_LEVEL)
@@ -249,6 +251,20 @@ def run_inference(video_path: str, fps: int = 2) -> Dict[str, object]:
             missing = required_keys - set(result.keys())
             log.error("Inference result missing keys: %s. Returning DEFAULT_RESULT", missing)
             return DEFAULT_RESULT.copy()
+
+        # Persist result to storage/results/result_YYYYMMDD_HHMMSS.json for auditing
+        try:
+            results_base = os.path.dirname(STORAGE_DIR)
+            results_dir = os.path.join(results_base, "results")
+            os.makedirs(results_dir, exist_ok=True)
+            ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+            fname = f"result_{ts}.json"
+            fpath = os.path.join(results_dir, fname)
+            with open(fpath, "w", encoding="utf-8") as fh:
+                json.dump(result, fh, indent=2)
+            log.info("Saved inference result to %s", fpath)
+        except Exception:
+            log.exception("Failed to persist inference result to JSON file")
 
         log.info("Inference result: %s", result)
         return result
