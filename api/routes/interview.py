@@ -8,9 +8,11 @@ from typing import Optional
 from fastapi import APIRouter, HTTPException
 from fastapi import UploadFile, File
 from pydantic import BaseModel
+from uuid import uuid4
 
 from interview_engine.interview_manager import InterviewManager
 from database import crud
+from database.crud import create_session, save_answer
 
 # Upload analysis
 from utils.storage_manager import save_video, generate_filename
@@ -127,4 +129,21 @@ async def analyze_upload(file: UploadFile = File(...)):
         raise HTTPException(status_code=500, detail="Inference failed")
 
     log.info("Inference done for file: %s", saved_path)
-    return result
+
+    # Create a new session for this upload and persist the answer in DB
+    session_id = str(uuid4())
+    try:
+        create_session(session_id)
+        log.info("Created DB session for upload: %s", session_id)
+    except Exception as exc:
+        log.error("Failed to create DB session for upload %s: %s", session_id, exc, exc_info=True)
+
+    try:
+        final_score = float(result.get("final_score", 0.0)) if isinstance(result, dict) else 0.0
+        feedback = result.get("feedback", []) if isinstance(result, dict) else []
+        save_answer(session_id, "upload", final_score, feedback)
+        log.info("Saved upload answer for session=%s score=%.3f", session_id, final_score)
+    except Exception as exc:
+        log.error("Failed to save upload answer for session=%s: %s", session_id, exc, exc_info=True)
+
+    return {"session_id": session_id, "result": result}
