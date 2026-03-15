@@ -1,9 +1,12 @@
-import React from 'react'
+import React, { useState } from 'react'
 import CameraBox from '../components/CameraBox'
 import QuestionBox from '../components/QuestionBox'
 import RecordControls from '../components/RecordControls'
 
 export default function Interview() {
+  // lift camera stream to parent so both CameraBox and RecordControls can share it
+  const [cameraStream, setCameraStream] = useState(null)
+
   return (
     <div className="min-h-screen bg-slate-900 text-gray-100 flex flex-col">
       {/* Top bar */}
@@ -17,7 +20,7 @@ export default function Interview() {
       <main className="flex-1 max-w-7xl mx-auto w-full px-6 py-8">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 h-full">
           <div className="p-1">
-            <CameraBox />
+            <CameraBox onStreamAvailable={setCameraStream} />
           </div>
 
           <div className="p-1">
@@ -29,7 +32,7 @@ export default function Interview() {
       {/* Bottom controls */}
       <footer className="w-full border-t border-slate-800 bg-slate-950/20">
         <div className="max-w-7xl mx-auto px-6 py-4">
-          <RecordControls />
+          <RecordControls stream={cameraStream} />
         </div>
       </footer>
     </div>

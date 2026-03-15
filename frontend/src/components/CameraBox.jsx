@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react'
 
-export default function CameraBox() {
+export default function CameraBox({ onStreamAvailable }) {
   const videoRef = useRef(null)
   const streamRef = useRef(null)
   const [error, setError] = useState(null)
@@ -23,6 +23,14 @@ export default function CameraBox() {
           // try play (some browsers require a user gesture; this is best-effort)
           const p = videoRef.current.play()
           if (p && p.catch) p.catch(() => {})
+        }
+        // notify parent if provided so others (RecordControls) can use the same stream
+        if (typeof onStreamAvailable === 'function') {
+          try {
+            onStreamAvailable(stream)
+          } catch (_) {
+            // ignore
+          }
         }
       } catch (err) {
         console.error('getUserMedia error', err)
