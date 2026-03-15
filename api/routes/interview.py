@@ -1,5 +1,3 @@
-"""Routes to control interview lifecycle: start, answer, finish."""
-
 from __future__ import annotations
 
 import logging
@@ -17,18 +15,15 @@ from interview_engine.interview_manager import InterviewManager
 from database import crud
 from database.crud import create_session, save_answer
 
-# Upload analysis
 from utils.storage_manager import save_video, generate_filename
 from pipelines.async_pipeline import run_async
 
-# Timeout (seconds) for run_inference to prevent long blocking calls in the request handler.
 INFERENCE_TIMEOUT: int = int(os.getenv("AIIT_INFERENCE_TIMEOUT", "60"))
 
 log = get_logger(__name__)
 
 router = APIRouter()
 
-# One InterviewManager instance for the app process
 IM = InterviewManager()
 
 
@@ -50,7 +45,6 @@ class FinishRequest(BaseModel):
 def start_interview():
     try:
         info = IM.start_interview()
-        # Persist session in DB
         try:
             crud.create_session(info["session_id"])
         except Exception:
@@ -66,22 +60,18 @@ def start_interview():
 @router.post("/answer")
 def submit_answer(req: AnswerRequest):
     try:
-        # Get current question before processing so we can persist the question text
         session_id = req.session_id
         current_q = IM._sm.get_current_question(session_id)
         if current_q is None:
             raise HTTPException(status_code=404, detail="Session not found or no current question")
 
-        # Process the video (runs inference and stores in session manager)
         try:
             sess = IM.process_answer(session_id, req.video_path)
         except Exception as exc:
             log.exception("Processing answer failed: %s", exc)
             raise HTTPException(status_code=500, detail="Processing failed")
 
-        # Persist the answer into DB
         try:
-            # inference result is last appended answer
             last_answer = sess.get("answers", [])[-1] if sess else None
             final_score = float(last_answer.get("final_score", 0.0)) if last_answer else 0.0
             feedback = last_answer.get("feedback", []) if last_answer else []
@@ -103,7 +93,6 @@ def finish_interview(req: FinishRequest):
         summary = IM.finish_interview(req.session_id)
         if summary is None:
             raise HTTPException(status_code=404, detail="Session not found")
-        # Optionally return stored DB representation
         try:
             db_summary = crud.get_session(req.session_id)
         except Exception:
@@ -120,13 +109,7 @@ def finish_interview(req: FinishRequest):
 
 @router.post("/analyze/upload")
 async def analyze_upload(file: UploadFile = File(...)):
-    """Upload a video file, save it to storage, run the inference pipeline, and return the result.
-
-    This endpoint is async only to efficiently receive the file bytes from FastAPI; saving and
-    inference run are synchronous operations to keep the pipeline behavior unchanged.
-    """
     try:
-        # Read upload content
         try:
             content = await file.read()
         except Exception as exc:
@@ -135,7 +118,6 @@ async def analyze_upload(file: UploadFile = File(...)):
 
         log.info("File uploaded: %s (%d bytes)", getattr(file, "filename", "<unknown>"), len(content) if content is not None else 0)
 
-        # Generate safe filename and save
         name = generate_filename("mp4")
         try:
             saved_path = save_video(content, name)
@@ -145,19 +127,14 @@ async def analyze_upload(file: UploadFile = File(...)):
 
         log.info("Saved file: %s", saved_path)
 
-        # Run inference asynchronously (wrapped) which handles timeouts and
-        # returns a safe fallback on failure. run_async runs inference in a
-        # background thread and returns the result dict.
         try:
             result = run_async(str(saved_path))
         except Exception:
             log.exception("Async inference failed for %s", saved_path)
-            # Return safe DEFAULT-like result
             result = {"emotion_score": 0.0, "eye_score": 0.0, "posture_score": 0.0, "final_score": 0.0, "feedback": []}
 
         log.info("Inference done for file: %s", saved_path)
 
-        # Create a new session for this upload and persist the answer in DB
         session_id = str(uuid4())
         try:
             create_session(session_id)
