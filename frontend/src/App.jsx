@@ -3,9 +3,11 @@ import { Routes, Route, Link } from 'react-router-dom'
 import Home from './pages/Home'
 import Interview from './pages/Interview'
 import Result from './pages/Result'
+import Loading from './pages/Loading'
 
 export default function App() {
   const [analysisResult, setAnalysisResult] = useState(null)
+  const [loading, setLoading] = useState(false)
 
   return (
     <div className="min-h-screen bg-gray-900 text-gray-100 font-sans">
@@ -23,7 +25,8 @@ export default function App() {
       <main className="container mx-auto p-6">
         <Routes>
           <Route path="/" element={<Home />} />
-          <Route path="/interview" element={<Interview setAnalysisResult={setAnalysisResult} />} />
+          <Route path="/interview" element={<Interview setAnalysisResult={setAnalysisResult} loading={loading} setLoading={setLoading} />} />
+          <Route path="/loading" element={<Loading />} />
           <Route path="/result" element={<Result result={analysisResult} />} />
         </Routes>
       </main>

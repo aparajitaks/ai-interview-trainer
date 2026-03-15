@@ -156,3 +156,13 @@ async def analyze_upload(file: UploadFile = File(...)):
     except Exception as exc:
         log.exception("Unhandled error in analyze_upload: %s", exc)
         raise HTTPException(status_code=500, detail="Internal server error")
+
+
+
+@router.post("/analyze")
+async def analyze(file: UploadFile = File(...)):
+    """Compatibility endpoint: accept uploads posted to /analyze and forward
+    them to the existing /analyze/upload handler.
+    """
+    # Delegate to the existing implementation to avoid duplication.
+    return await analyze_upload(file)

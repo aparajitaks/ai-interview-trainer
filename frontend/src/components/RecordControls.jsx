@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react'
 
-export default function RecordControls({ stream, onAnalysisComplete }) {
+export default function RecordControls({ stream, onAnalysisComplete, setLoading }) {
   const [recording, setRecording] = useState(false)
   const [seconds, setSeconds] = useState(0)
   const [recordedBlob, setRecordedBlob] = useState(null)
@@ -64,6 +64,13 @@ export default function RecordControls({ stream, onAnalysisComplete }) {
 
         // Upload recorded video to backend analyze endpoint
         ;(async () => {
+          // signal loading state in parent
+          if (typeof setLoading === 'function') {
+            try {
+              setLoading(true)
+            } catch (e) {}
+          }
+
           try {
             const formData = new FormData()
             // append as 'video' per API contract
@@ -100,6 +107,14 @@ export default function RecordControls({ stream, onAnalysisComplete }) {
             }
           } catch (err) {
             console.log('upload failed', err)
+          } finally {
+            // ensure loading is cleared if onAnalysisComplete did not already handle it
+            // (Interview's handler will attempt to clear loading as well)
+            if (typeof setLoading === 'function') {
+              try {
+                setLoading(false)
+              } catch (e) {}
+            }
           }
         })()
       }
