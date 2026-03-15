@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react'
 
-export default function RecordControls({ stream }) {
+export default function RecordControls({ stream, onAnalysisComplete }) {
   const [recording, setRecording] = useState(false)
   const [seconds, setSeconds] = useState(0)
   const [recordedBlob, setRecordedBlob] = useState(null)
@@ -90,6 +90,14 @@ export default function RecordControls({ stream }) {
             }
 
             console.log('analysis result', data)
+            // notify parent component (Interview) if provided
+            if (typeof onAnalysisComplete === 'function') {
+              try {
+                onAnalysisComplete(data)
+              } catch (e) {
+                // ignore
+              }
+            }
           } catch (err) {
             console.log('upload failed', err)
           }

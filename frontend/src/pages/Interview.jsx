@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import CameraBox from '../components/CameraBox'
 import QuestionBox from '../components/QuestionBox'
 import RecordControls from '../components/RecordControls'
@@ -6,6 +7,16 @@ import RecordControls from '../components/RecordControls'
 export default function Interview() {
   // lift camera stream to parent so both CameraBox and RecordControls can share it
   const [cameraStream, setCameraStream] = useState(null)
+
+  const navigate = useNavigate()
+
+  const handleAnalysisComplete = (data) => {
+    if (typeof setAnalysisResult === 'function') {
+      setAnalysisResult(data)
+    }
+    // navigate to result page
+    navigate('/result')
+  }
 
   return (
     <div className="min-h-screen bg-slate-900 text-gray-100 flex flex-col">
@@ -32,7 +43,7 @@ export default function Interview() {
       {/* Bottom controls */}
       <footer className="w-full border-t border-slate-800 bg-slate-950/20">
         <div className="max-w-7xl mx-auto px-6 py-4">
-          <RecordControls stream={cameraStream} />
+          <RecordControls stream={cameraStream} onAnalysisComplete={handleAnalysisComplete} />
         </div>
       </footer>
     </div>
