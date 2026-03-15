@@ -38,7 +38,6 @@ def save_answer(session_id: str, question: Optional[str], score: float, feedback
     """Persist a single answer result tied to a session_id."""
     db: Session = SessionLocal()
     try:
-        # Ensure session exists
         sess = db.query(models.InterviewSession).filter_by(session_id=session_id).first()
         if not sess:
             log.info("DB session %s not found - creating", session_id)

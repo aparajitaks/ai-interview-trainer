@@ -10,8 +10,3 @@ pytest
 httpx
 python-dotenv
 
-# Optional (comment/uncomment as needed). These packages are large and may
-# increase build time; keep them out of the base image for smaller builds.
-# mediapipe
-# torch
-# transformers

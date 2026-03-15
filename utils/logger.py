@@ -14,7 +14,6 @@ from config.settings import LOG_LEVEL
 
 def _configure_root_logger() -> None:
     root = logging.getLogger()
-    # Avoid reconfiguring if already set up
     if root.handlers:
         return
     root.setLevel(LOG_LEVEL)

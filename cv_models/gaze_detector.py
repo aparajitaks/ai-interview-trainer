@@ -70,29 +70,23 @@ def detect_gaze(frame: np.ndarray, detector) -> Optional[float]:
         log.error("mediapipe not available in detect_gaze")
         return None
 
-    # MediaPipe expects RGB
     image_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
     results = detector.process(image_rgb)
     if not results.multi_face_landmarks:
         log.debug("No face landmarks detected in frame for gaze")
         return None
 
-    # Use first face
     face_landmarks = results.multi_face_landmarks[0]
     h, w = frame.shape[:2]
 
-    # Common iris indices used by MediaPipe (when refine_landmarks=True)
-    # left iris: 468-472, right iris: 473-477
     try:
         lm = face_landmarks.landmark
         left_iris_idxs = list(range(468, 473))
         right_iris_idxs = list(range(473, 478))
 
-        # Eye corner landmarks (approximate) from FaceMesh
         left_eye_idxs = [33, 133]
         right_eye_idxs = [362, 263]
 
-        # Compute centers
         left_iris_pts = [_landmark_to_point(lm[i], w, h) for i in left_iris_idxs if i < len(lm)]
         right_iris_pts = [ _landmark_to_point(lm[i], w, h) for i in right_iris_idxs if i < len(lm)]
         left_eye_pts = [ _landmark_to_point(lm[i], w, h) for i in left_eye_idxs if i < len(lm)]
@@ -107,20 +101,15 @@ def detect_gaze(frame: np.ndarray, detector) -> Optional[float]:
         left_eye_center = np.mean(left_eye_pts, axis=0)
         right_eye_center = np.mean(right_eye_pts, axis=0)
 
-        # Horizontal displacement of iris within eye region
         left_disp = left_iris_center[0] - left_eye_center[0]
         right_disp = right_iris_center[0] - right_eye_center[0]
 
-        # Eye width (distance between eye corners)
         left_width = abs(left_eye_pts[1][0] - left_eye_pts[0][0]) if len(left_eye_pts) >= 2 else 1.0
         right_width = abs(right_eye_pts[1][0] - right_eye_pts[0][0]) if len(right_eye_pts) >= 2 else 1.0
 
-        # Normalized displacements
         left_norm = left_disp / max(left_width, 1.0)
         right_norm = right_disp / max(right_width, 1.0)
 
-        # We expect near-zero normalized displacement when looking forward
-        # Map absolute normalized displacement to score in [0,1]
         left_score = 1.0 - min(1.0, abs(left_norm) * 2.0)
         right_score = 1.0 - min(1.0, abs(right_norm) * 2.0)
 

@@ -1,4 +1,3 @@
-# Architecture Overview — AI Interview Trainer
 
 This document explains the project's architecture and the purpose of each major component. It is intended for engineers onboarding onto the project and for planning extensions.
 

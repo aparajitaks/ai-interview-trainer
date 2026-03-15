@@ -27,7 +27,6 @@ class InterviewSession(Base):
     session_id = Column(String(64), unique=True, index=True, nullable=False)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
 
-    # relationship to answers
     answers = relationship("AnswerResult", back_populates="session")
 
 
@@ -56,7 +55,6 @@ class AnswerResult(Base):
 
 
 if __name__ == "__main__":
-    # Quick check - create tables
     from database.db import init_db
 
     init_db()

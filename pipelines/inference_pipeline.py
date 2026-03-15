@@ -30,7 +30,6 @@ import numpy as np
 
 from preprocessing.video_to_frames import video_to_frames
 
-# Model loader and CV scorers
 from ai_models.model_loader import get_emotion_model, get_pose_model
 from cv_models.emotion_model import predict_emotion, get_emotion_score
 from cv_models.face_detector import load_face_detector, detect_faces
@@ -47,7 +46,6 @@ log = logging.getLogger(__name__)
 logging.basicConfig(level=LOG_LEVEL)
 
 
-# Default safe result to return on any early failure or empty input
 DEFAULT_RESULT = {
     "emotion_score": 0.0,
     "eye_score": 0.0,
@@ -77,7 +75,6 @@ def run_inference(video_path: str, fps: int = 2) -> Dict[str, object]:
 
     tmp_dir = tempfile.mkdtemp(prefix="aiit_frames_")
     try:
-        # Extract frames (writes into tmp_dir)
         log.info("Extracting frames to: %s", tmp_dir)
         video_to_frames(video_path, tmp_dir, fps=fps)
 
@@ -86,7 +83,6 @@ def run_inference(video_path: str, fps: int = 2) -> Dict[str, object]:
             log.error("No frames extracted from video: %s", video_path)
             return DEFAULT_RESULT.copy()
 
-        # Sample frames according to settings.SAMPLE_FRAMES
         try:
             total = len(frame_paths)
             n = max(1, int(SAMPLE_FRAMES))
@@ -101,7 +97,6 @@ def run_inference(video_path: str, fps: int = 2) -> Dict[str, object]:
             log.exception("Frame sampling failed; falling back to all frames")
             sampled_paths = frame_paths
 
-        # Prepare models/detectors
         try:
             face_detector = load_face_detector()
         except Exception:
@@ -120,7 +115,6 @@ def run_inference(video_path: str, fps: int = 2) -> Dict[str, object]:
             log.exception("Failed to load emotion model via model_loader")
             emotion_model = None
 
-        # Accumulators
         face_crops = []
         sampled_frames = []
         posture_scores = []
@@ -130,10 +124,8 @@ def run_inference(video_path: str, fps: int = 2) -> Dict[str, object]:
             if frame is None:
                 log.debug("Skipping unreadable frame: %s", fp)
                 continue
-            # Collect sampled frames for gaze/emotion
             sampled_frames.append(frame)
 
-            # Face detection + crop for emotion
             try:
                 if face_detector is None:
                     log.debug("No face detector available; skipping face detection for emotion")
@@ -150,7 +142,6 @@ def run_inference(video_path: str, fps: int = 2) -> Dict[str, object]:
             except Exception:
                 log.exception("Face detection/cropping failed for frame: %s", fp)
 
-            # Pose detection (on whole frame) if available
             if pose_detector is not None:
                 try:
                     landmarks = detect_pose(frame, pose_detector)
@@ -167,14 +158,12 @@ def run_inference(video_path: str, fps: int = 2) -> Dict[str, object]:
                         ps = 0.0
                     posture_scores.append(ps)
 
-        # Compute eye score using sampled_frames
         try:
             eye_score_raw = get_gaze_score(sampled_frames)
         except Exception:
             log.exception("Gaze scoring failed; defaulting to 0.0")
             eye_score_raw = 0.0
 
-        # Compute emotion score using face crops and emotion_model (safe fallback if no faces)
         if not face_crops or emotion_model is None:
             log.debug("No face crops or emotion model missing; setting emotion_score to 0.0")
             emotion_score_val = 0.0
@@ -189,10 +178,8 @@ def run_inference(video_path: str, fps: int = 2) -> Dict[str, object]:
                 log.exception("Emotion scoring failed")
                 emotion_score_val = 0.0
 
-        # Posture aggregation: mean of posture_scores
         posture_score_raw = float(np.mean(posture_scores)) if posture_scores else 0.0
 
-        # Clamp raw metrics to [0,1] to ensure numeric stability
         try:
             emotion_score_val = float(np.clip(emotion_score_val, 0.0, 1.0))
         except Exception:
@@ -211,7 +198,6 @@ def run_inference(video_path: str, fps: int = 2) -> Dict[str, object]:
             log.error("Failed to clamp posture_score_raw; defaulting to 0.0", exc_info=True)
             posture_score_raw = 0.0
 
-        # Normalize/aggregate metrics via advanced scoring
         try:
             final = advanced_scoring.compute_score(emotion_score_val, eye_score_raw, posture_score_raw)
         except Exception:
@@ -223,7 +209,6 @@ def run_inference(video_path: str, fps: int = 2) -> Dict[str, object]:
             log.error("Failed to clamp final score; defaulting to 0.0", exc_info=True)
             final = 0.0
 
-        # Feedback
         try:
             feedback = generate_feedback(
                 float(np.clip(emotion_score_val, 0.0, 1.0)),
@@ -242,17 +227,12 @@ def run_inference(video_path: str, fps: int = 2) -> Dict[str, object]:
             "feedback": feedback,
         }
 
-        # Validate result contains all required keys. If any are missing,
-        # return a safe DEFAULT_RESULT to avoid downstream KeyError or
-        # schema mismatches. This preserves existing behavior while
-        # guarding against regressions in the downstream model functions.
         required_keys = {"emotion_score", "eye_score", "posture_score", "final_score", "feedback"}
         if not required_keys.issubset(set(result.keys())):
             missing = required_keys - set(result.keys())
             log.error("Inference result missing keys: %s. Returning DEFAULT_RESULT", missing)
             return DEFAULT_RESULT.copy()
 
-        # Persist result to storage/results/result_YYYYMMDD_HHMMSS.json for auditing
         try:
             results_base = os.path.dirname(STORAGE_DIR)
             results_dir = os.path.join(results_base, "results")
@@ -270,7 +250,6 @@ def run_inference(video_path: str, fps: int = 2) -> Dict[str, object]:
         return result
 
     finally:
-        # Cleanup extracted frames directory
         try:
             shutil.rmtree(tmp_dir)
             log.debug("Removed temporary frames directory: %s", tmp_dir)
@@ -279,7 +258,6 @@ def run_inference(video_path: str, fps: int = 2) -> Dict[str, object]:
 
 
 if __name__ == "__main__":
-    # Simple command-line test. Update the path below to a small sample video.
     sample_video = os.path.join(STORAGE_DIR, "sample.mp4")
     res = run_inference(sample_video)
     log.info("Run complete. Result: %s", res)

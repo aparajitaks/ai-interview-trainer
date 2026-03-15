@@ -39,7 +39,6 @@ def generate_feedback(emotion_score: float, eye_score: float, posture_score: flo
         if final_score is None:
             final_score = 0.0
 
-        # Tip messages
         if float(eye_score) < 0.4:
             msgs.append("Maintain better eye contact")
         if float(posture_score) < 0.4:
@@ -47,7 +46,6 @@ def generate_feedback(emotion_score: float, eye_score: float, posture_score: flo
         if float(emotion_score) < 0.4:
             msgs.append("Try to show confidence in facial expression")
 
-        # Performance summary
         fs = float(final_score)
         if fs > 0.75:
             msgs.append("Excellent performance")
@@ -58,12 +56,10 @@ def generate_feedback(emotion_score: float, eye_score: float, posture_score: flo
         else:
             msgs.append("Needs improvement")
 
-        # Reinforce when no issue tips were added
         if not any(m in msgs for m in ("Maintain better eye contact", "Sit straight and keep good posture", "Try to show confidence in facial expression")):
             msgs.append("Good interview behavior")
 
     except Exception:
-        # Defensive: if anything goes wrong, return a safe generic message
         return ["Feedback unavailable"]
 
     return msgs

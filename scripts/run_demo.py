@@ -17,8 +17,6 @@ import os
 from pathlib import Path
 from typing import Any, Dict
 
-# Ensure project root is on sys.path so top-level packages (pipelines, cv_models,
-# ai_models, etc.) can be imported when this script is executed directly.
 _ROOT = Path(__file__).resolve().parents[1]
 if str(_ROOT) not in sys.path:
     sys.path.insert(0, str(_ROOT))

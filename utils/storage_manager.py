@@ -20,7 +20,6 @@ def get_storage_dir() -> Path:
     ./storage/video. This function creates the directory if it does not
     exist.
     """
-    # STORAGE_DIR from config can be absolute or relative; resolve and create
     storage_dir = Path(STORAGE_DIR).resolve()
     try:
         storage_dir.mkdir(parents=True, exist_ok=True)
@@ -68,14 +67,12 @@ def save_video(file_bytes: Union[bytes, bytearray], filename: str) -> Path:
     safe_name = Path(filename).name  # strip any path components
     target_path = storage_dir / safe_name
 
-    # If file exists, append a short suffix to avoid overwriting
     if target_path.exists():
         stem = target_path.stem
         suffix = target_path.suffix
         new_name = f"{stem}_{uuid.uuid4().hex[:6]}{suffix}"
         target_path = storage_dir / new_name
 
-    # Write to a temp file in the same directory and rename to ensure atomicity
     try:
         with tempfile.NamedTemporaryFile(delete=False, dir=str(storage_dir)) as tmp:
             tmp.write(file_bytes)
@@ -84,7 +81,6 @@ def save_video(file_bytes: Union[bytes, bytearray], filename: str) -> Path:
         tmp_path.replace(target_path)
     except Exception:
         log.error("Failed to save video to %s", target_path, exc_info=True)
-        # Clean up temp file if it still exists
         try:
             if 'tmp_path' in locals() and tmp_path.exists():
                 tmp_path.unlink()
@@ -97,7 +93,6 @@ def save_video(file_bytes: Union[bytes, bytearray], filename: str) -> Path:
 
 
 if __name__ == "__main__":
-    # Simple test main: write a small dummy file and log the saved path.
     TEST_BYTES = b"\x00\x01\x02dummy video data\x03\x04"
     test_name = generate_filename(ext="mp4")
     try:

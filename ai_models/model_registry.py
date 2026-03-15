@@ -16,9 +16,6 @@ from utils.logger import get_logger
 
 log = get_logger(__name__)
 
-# Model names are read from environment variables. Provide sensible
-# defaults so the application can run in development without additional
-# configuration. These are immutable constants (Final) for readability.
 EMOTION_MODEL: Final[str] = os.getenv("EMOTION_MODEL", "microsoft/resnet-50")
 POSE_MODEL: Final[str] = os.getenv("POSE_MODEL", "mediapipe/pose")
 GAZE_MODEL: Final[str] = os.getenv("GAZE_MODEL", "gaze-estimation/default")
@@ -54,8 +51,6 @@ def get_model_name(key: str) -> str:
 
 
 if __name__ == "__main__":
-    # Simple CLI/test to print resolved model names. Safe to run in CI or
-    # locally to verify environment overrides.
     print("EMOTION_MODEL=", EMOTION_MODEL)
     print("POSE_MODEL=", POSE_MODEL)
     print("GAZE_MODEL=", GAZE_MODEL)

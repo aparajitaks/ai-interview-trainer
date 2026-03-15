@@ -6,11 +6,8 @@ from typing import List, Tuple, Optional
 from config.settings import FRAME_DIR
 from utils.logger import get_logger
 
-# Type alias for bounding box (x, y, w, h)
 BBox = Tuple[int, int, int, int]
 
-# Simple module-level cache for the Haarcascade detector to avoid reloading
-# on every call in a pipeline.
 _face_detector: Optional[cv2.CascadeClassifier] = None
 
 
@@ -44,8 +41,6 @@ def load_face_detector(path: Optional[str] = None) -> cv2.CascadeClassifier:
     """
 
     if path is None:
-        # Use OpenCV's bundled haarcascade. This avoids shipping large model
-        # files and works across platforms where OpenCV is installed.
         path = os.path.join(cv2.data.haarcascades, "haarcascade_frontalface_default.xml")
 
     if not os.path.exists(path):
@@ -87,19 +82,16 @@ def detect_faces(
         log.warning("Empty frame passed to detect_faces")
         return []
 
-    # Convert to grayscale for the Haarcascade detector which expects gray images
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
     rects = detector.detectMultiScale(
         gray, scaleFactor=scaleFactor, minNeighbors=minNeighbors, minSize=minSize
     )
 
-    # Ensure we always return a list of tuples for consistency
     boxes: List[BBox] = []
     if rects is None:
         return boxes
 
-    # OpenCV may return a numpy array of shape (N,4)
     for r in rects:
         x, y, w, h = int(r[0]), int(r[1]), int(r[2]), int(r[3])
         boxes.append((x, y, w, h))
@@ -186,5 +178,4 @@ def test_main(frames_dir: str = None) -> None:
 
 
 if __name__ == "__main__":
-    # Allow running the module directly for a quick smoke test
     test_main()

@@ -1,4 +1,3 @@
-# Pipeline Description — AI Interview Trainer
 
 This document describes the canonical inference pipeline used by the project.
 

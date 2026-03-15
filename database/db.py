@@ -15,18 +15,13 @@ from sqlalchemy.orm import sessionmaker, declarative_base
 log = logging.getLogger(__name__)
 logging.basicConfig(level=LOG_LEVEL)
 
-# Database file location (in-repo). Value comes from config.settings which
-# reads AIIT_DB_PATH or falls back to ./storage/ai_interview.db
 os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
 
-# SQLite engine. check_same_thread False for multi-threaded apps; safe here.
 ENGINE_URL = f"sqlite:///{DB_PATH}"
 engine = create_engine(ENGINE_URL, connect_args={"check_same_thread": False}, echo=False)
 
-# Session factory
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
-# Declarative base for models
 Base = declarative_base()
 
 

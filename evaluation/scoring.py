@@ -42,10 +42,8 @@ def compute_final_score(
     except Exception:
         p = 0.0
 
-    # Weighted sum
     final = 0.3 * e + 0.3 * ey + 0.4 * p
 
-    # Clamp to [0,1] for pipeline stability
     final = float(np.clip(final, 0.0, 1.0))
     log.debug("compute_final_score: e=%.3f ey=%.3f p=%.3f -> final=%.3f", e, ey, p, final)
     return final

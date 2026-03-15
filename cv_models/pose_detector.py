@@ -5,10 +5,8 @@ import os
 import glob
 from typing import List, Dict, Optional, Tuple
 
-# Bounding box alias for consistency with other CV modules
 BBox = Tuple[int, int, int, int]
 
-# Module-level cache for the MediaPipe Pose detector
 _pose_detector = None
 
 
@@ -68,9 +66,6 @@ def load_pose_detector(static_image_mode: bool = False, model_complexity: int = 
             min_tracking_confidence=0.5,
         )
     except Exception as exc:  # pragma: no cover - runtime environment dependent
-        # MediaPipe can fail to initialize if native graph/config assets are
-        # missing or incompatible with the installed mediapipe build. Surface
-        # a clear error message to help users debug their environment.
         log.exception(
             "Failed to initialize MediaPipe Pose detector: %s", exc
         )
@@ -103,7 +98,6 @@ def detect_pose(frame: np.ndarray, detector) -> List[Dict[str, float]]:
         log.warning("Empty frame passed to detect_pose")
         return []
 
-    # MediaPipe expects RGB images
     image_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
     results = detector.process(image_rgb)
 
@@ -145,24 +139,20 @@ def draw_pose(frame: np.ndarray, landmarks: List[Dict[str, float]], color: Tuple
 
     out = frame.copy()
 
-    # Reconstruct a MediaPipe-style LandmarkList if we have landmarks
     if not landmarks:
         return out
 
     mp_drawing = mp.solutions.drawing_utils
     mp_pose = mp.solutions.pose
 
-    # Create a LandmarkList proto and populate it
     landmark_list = mp.framework.formats.landmark_pb2.NormalizedLandmarkList()
     for lm in landmarks:
         nl = NormalizedLandmark()
         nl.x = lm["x"]
         nl.y = lm["y"]
         nl.z = lm.get("z", 0.0)
-        # visibility is not part of the drawn landmark proto but keep as attribute
         landmark_list.landmark.append(nl)
 
-    # Drawing utilities expect the image in RGB; convert, draw, convert back
     img_rgb = cv2.cvtColor(out, cv2.COLOR_BGR2RGB)
     mp_drawing.draw_landmarks(img_rgb, landmark_list, mp_pose.POSE_CONNECTIONS)
     out_bgr = cv2.cvtColor(img_rgb, cv2.COLOR_RGB2BGR)
@@ -186,7 +176,6 @@ def get_posture_score(landmarks: List[Dict[str, float]]) -> float:
     if not landmarks:
         return 0.0
 
-    # MediaPipe landmark indices for shoulders and hips
     idx = {
         "left_shoulder": 11,
         "right_shoulder": 12,
@@ -194,7 +183,6 @@ def get_posture_score(landmarks: List[Dict[str, float]]) -> float:
         "right_hip": 24,
     }
 
-    # Helper to get landmark by index
     def lm(i: int) -> Optional[Dict[str, float]]:
         for l in landmarks:
             if l.get("index") == i:
@@ -210,14 +198,12 @@ def get_posture_score(landmarks: List[Dict[str, float]]) -> float:
         log.debug("Not all torso landmarks present for posture scoring")
         return 0.0
 
-    # Midpoints (x,y) in normalized coordinates
     mid_shoulder = ((ls["x"] + rs["x"]) / 2.0, (ls["y"] + rs["y"]) / 2.0)
     mid_hip = ((lh["x"] + rh["x"]) / 2.0, (lh["y"] + rh["y"]) / 2.0)
 
     vx = mid_shoulder[0] - mid_hip[0]
     vy = mid_shoulder[1] - mid_hip[1]
 
-    # Vector pointing up the torso; compare with vertical vector (0,-1)
     import math
 
     v_norm = math.hypot(vx, vy)
@@ -228,15 +214,12 @@ def get_posture_score(landmarks: List[Dict[str, float]]) -> float:
     cos_theta = max(-1.0, min(1.0, dot / v_norm))
     angle = math.acos(cos_theta)  # radians; 0 means vertical
 
-    # Normalize the score: angle 0 -> 1.0, angle pi/2 -> 0.0
     score = max(0.0, 1.0 - (angle / (math.pi / 2)))
 
-    # Weight by average visibility of torso landmarks (if available)
     vis = [ls.get("visibility", 0.0), rs.get("visibility", 0.0), lh.get("visibility", 0.0), rh.get("visibility", 0.0)]
     visibility = sum(vis) / len(vis)
     final = float(score * visibility)
 
-    # Clamp final score to [0,1] for stability across the pipeline
     final = float(np.clip(final, 0.0, 1.0))
     return final
 

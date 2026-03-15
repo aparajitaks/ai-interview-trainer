@@ -1,4 +1,3 @@
-# AI Interview Trainer
 
 AI Interview Trainer is a modular toolkit for recording, analyzing and evaluating video interview answers. It provides a headless pipeline to extract frames from candidate videos, run lightweight computer-vision models (face, pose, eye-contact, emotion), compute normalized metrics, produce an aggregate score and user-facing feedback, and persist results to a local SQLite database. A small FastAPI backend exposes endpoints to orchestrate interview sessions.
 
@@ -118,10 +117,8 @@ Build and run with Docker (no compose)
 If you don't want to use docker-compose you can build and run the image directly. The examples below mount the host `./storage` into the container so the SQLite DB and uploaded videos persist outside the image.
 
 ```bash
-# build the image (run from project root)
 docker build -t ai-interview-trainer:latest .
 
-# run the container, mounting storage and exposing port 8000
 docker run --rm -p 8000:8000 \
   -v "$PWD/storage":/app/storage \
   -e AIIT_PRELOAD_MODELS=false \

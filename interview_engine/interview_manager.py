@@ -35,14 +35,11 @@ class InterviewManager:
 
     def process_answer(self, session_id: str, video_path: str) -> Optional[Dict[str, Any]]:
         """Process an answer video: run inference, store results, and return updated session state."""
-        # Run the inference pipeline
         log.info("Processing answer for session=%s video=%s", session_id, video_path)
         result = run_inference(video_path)
 
-        # Persist into session
         self._sm.add_answer(session_id, result)
 
-        # Return current session snapshot
         sess = self._sm.get_session(session_id)
         log.debug("Session %s after processing: %s", session_id, sess)
         return sess
@@ -64,9 +61,7 @@ def test_flow() -> None:
     sid = info["session_id"]
     log.info("Started session: %s; first question: %s", sid, info.get("first_question"))
 
-    # NOTE: For a real run replace the sample path below with a real video.
     sample_video = os.path.join(STORAGE_DIR, "sample.mp4")
-    # The following will run the inference pipeline which may download models.
     try:
         im.process_answer(sid, sample_video)
     except Exception:

@@ -17,9 +17,7 @@ from utils.logger import get_logger
 
 log = get_logger(__name__)
 
-# In-memory cache storing loaded model objects keyed by logical names
 _MODEL_CACHE: Dict[str, Any] = {}
-# Global lock to protect cache initialization in multi-threaded servers
 _CACHE_LOCK = threading.RLock()
 
 
@@ -31,7 +29,6 @@ def _load_emotion_model() -> Any:
     """
     model_name = get_model_name("emotion")
     try:
-        # Import locally to avoid module import-time side effects
         from cv_models.emotion_model import load_emotion_model
 
         log.info("Loading emotion model: %s", model_name)
@@ -68,7 +65,6 @@ def _load_gaze_model() -> Any:
     """
     model_name = get_model_name("gaze")
     try:
-        # Best-effort import: some deployments may not include a gaze model
         from cv_models import gaze as gaze_mod  # type: ignore
 
         if hasattr(gaze_mod, "load_gaze_model"):
@@ -88,18 +84,15 @@ def _get_or_load(name: str, loader) -> Optional[Any]:
     The function is thread-safe and will ensure the loader is executed at
     most once for a given name.
     """
-    # Fast path: check without lock
     model = _MODEL_CACHE.get(name)
     if model is not None:
         return model
 
     with _CACHE_LOCK:
-        # Re-check under lock
         model = _MODEL_CACHE.get(name)
         if model is not None:
             return model
 
-        # Load and cache
         model = loader()
         _MODEL_CACHE[name] = model
         return model
@@ -121,7 +114,6 @@ def get_gaze_model() -> Optional[Any]:
 
 
 if __name__ == "__main__":
-    # Quick smoke test printing out the loaded model objects (or None).
     print("Emotion model:", get_emotion_model())
     print("Pose model:", get_pose_model())
     print("Gaze model:", get_gaze_model())

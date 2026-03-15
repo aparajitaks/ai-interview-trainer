@@ -8,7 +8,6 @@ services:
     volumes:
       - ./storage:/app/storage
     environment:
-      # Ensure the SQLite DB file is placed inside the mounted storage volume
       - AIIT_DB_PATH=/app/storage/ai_interview.db
     restart: unless-stopped
     healthcheck:

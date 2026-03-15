@@ -67,7 +67,6 @@ def run_async(video_path: str) -> Dict[str, Any]:
             return result
         except FuturesTimeoutError:
             log.exception("Async inference timed out after %s seconds for %s", timeout_s, video_path)
-            # Best-effort cancellation
             try:
                 future.cancel()
             except Exception:

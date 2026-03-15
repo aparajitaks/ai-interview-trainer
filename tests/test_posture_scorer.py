@@ -7,12 +7,9 @@ def make_lm(idx, x, y):
 
 
 def test_good_posture():
-    # Construct landmarks list with dict-style entries expected by pose detector
     landmarks = [{} for _ in range(33)]
-    # shoulders level
     landmarks[11] = make_lm(11, 0.4, 0.5)
     landmarks[12] = make_lm(12, 0.6, 0.5)
-    # nose above midpoint
     landmarks[0] = make_lm(0, 0.5, 0.3)
 
     score = compute_posture_score(landmarks)
@@ -21,7 +18,6 @@ def test_good_posture():
 
 def test_bad_posture():
     landmarks = [{} for _ in range(33)]
-    # shoulders misaligned
     landmarks[11] = make_lm(11, 0.4, 0.6)
     landmarks[12] = make_lm(12, 0.6, 0.4)
     landmarks[0] = make_lm(0, 0.55, 0.7)

@@ -34,7 +34,6 @@ def generate_feedback(emotion_score: Optional[float], eye_score: Optional[float]
     except Exception:
         p = 0.0
 
-    # Clamp for safety
     e = float(np.clip(e, 0.0, 1.0))
     ey = float(np.clip(ey, 0.0, 1.0))
     p = float(np.clip(p, 0.0, 1.0))

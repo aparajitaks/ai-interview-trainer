@@ -7,22 +7,17 @@ Recommended installation options
 1) Quick: install from the GitHub repo (may still build from source):
 
 ```bash
-# activate the project's venv first
 source .venv/bin/activate
-# Make sure pip, setuptools, and wheel are up-to-date
 pip install --upgrade pip setuptools wheel setuptools_scm
-# Install whisper from the repo
 pip install git+https://github.com/openai/whisper.git
 ```
 
 2) Use Conda (recommended on macOS for complex audio/C extensions)
 
 ```bash
-# create conda env
 conda create -n ai-interview-trainer python=3.10
 conda activate ai-interview-trainer
 pip install -r requirements.txt  # with openai-whisper commented out
-# install whisper
 pip install git+https://github.com/openai/whisper.git
 ```
 

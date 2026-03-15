@@ -23,15 +23,12 @@ log = get_logger(__name__)
 def create_app() -> FastAPI:
     app = FastAPI(title="AI Interview Trainer API")
 
-    # Include routers
     app.include_router(interview_router.router, prefix="/interview", tags=["interview"])
     app.include_router(results_router.router, prefix="/results", tags=["results"])
     app.include_router(health_router.router)
 
-    # Log startup configuration for observability
     @app.on_event("startup")
     def _log_startup():
-        # Print to stdout for quick visibility in container logs / consoles
         print("Starting AI Interview Trainer API")
         log.info("Starting AI Interview Trainer API")
         log.info("LOG_LEVEL=%s", LOG_LEVEL)
@@ -39,14 +36,10 @@ def create_app() -> FastAPI:
         log.info("STORAGE_DIR=%s", STORAGE_DIR)
         log.info("EMOTION_MODEL=%s", EMOTION_MODEL)
 
-        # Model preload/status (optional)
         app.state.model_status = {"emotion": "not_loaded", "pose": "not_loaded", "gaze": "not_loaded"}
         try:
             preload = os.getenv("AIIT_PRELOAD_MODELS", "false").lower() in ("1", "true", "yes")
             if preload:
-                # Import model loaders lazily to avoid import-time failures on
-                # platforms where optional native packages (MediaPipe/Torch)
-                # may not be available.
                 try:
                     from ai_models.model_loader import get_emotion_model
 
@@ -68,7 +61,6 @@ def create_app() -> FastAPI:
                     app.state.model_status["pose"] = "failed"
 
                 try:
-                    # Gaze detector has a loader function in cv_models; import lazily
                     from cv_models.gaze_detector import load_gaze_detector
 
                     g = load_gaze_detector()
@@ -89,7 +81,6 @@ app = create_app()
 
 
 if __name__ == "__main__":
-    # Simple run for local testing. Use `uvicorn api.main:app` in production.
     import uvicorn
 
     uvicorn.run("api.main:app", host="127.0.0.1", port=8000, reload=False)

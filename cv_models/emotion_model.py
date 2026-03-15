@@ -14,11 +14,9 @@ from config.settings import EMOTION_MODEL, FRAME_DIR
 log = get_logger(__name__)
 
 
-# Default HF model (configurable via environment)
 DEFAULT_MODEL = EMOTION_MODEL
 
 
-# Emotion score mapping to convert label -> heuristic score when helpful.
 EMOTION_SCORE_MAP = {
     "happy": 1.0,
     "neutral": 0.7,
@@ -29,7 +27,6 @@ EMOTION_SCORE_MAP = {
     "disgust": 0.1,
 }
 
-# Module-level cache for the transformers pipeline
 _emotion_model = None
 
 
@@ -79,7 +76,6 @@ def load_emotion_model(model_name: str = DEFAULT_MODEL, device: Optional[int] = 
         log.error("transformers or torch not available: %s", exc, exc_info=True)
         raise ImportError("transformers and torch are required for emotion model") from exc
 
-    # Auto-select device if not provided
     if device is None:
         device = 0 if torch.cuda.is_available() else -1
 
@@ -108,11 +104,9 @@ def predict_emotion(face_img: np.ndarray, model) -> Tuple[str, float]:
         Tuple of (label, confidence) where confidence is a float in [0,1].
     """
 
-    # Defensive: if face image is missing, return a neutral baseline
     if face_img is None:
         return "neutral", 0.0
 
-    # If caller didn't pass a model, try to use cached loader
     if model is None:
         try:
             model = get_emotion_model()
@@ -126,7 +120,6 @@ def predict_emotion(face_img: np.ndarray, model) -> Tuple[str, float]:
         log.exception("Invalid face_img passed to predict_emotion")
         return "neutral", 0.0
 
-    # transformers pipelines accept PIL images or numpy arrays in RGB.
     try:
         preds = model(rgb, top_k=1)
     except Exception as exc:
@@ -140,7 +133,6 @@ def predict_emotion(face_img: np.ndarray, model) -> Tuple[str, float]:
     label = str(top.get("label", "unknown"))
     score = float(top.get("score", 0.0))
 
-    # Apply heuristic mapping when available, falling back to model score
     label_key = label.lower()
     mapped = EMOTION_SCORE_MAP.get(label_key, score)
     score = float(np.clip(mapped, 0.0, 1.0))
@@ -177,7 +169,6 @@ def get_emotion_score(faces: Sequence[np.ndarray], model) -> Dict[str, Any]:
             log.error("predict_emotion raised an exception for a face; defaulting to error/0.0", exc_info=True)
             label, score = "error", 0.0
 
-        # Ensure score is clamped and use mapping consistency
         score = float(np.clip(score, 0.0, 1.0))
         details.append({"label": label, "score": score})
         totals[label] = totals.get(label, 0.0) + score
@@ -186,9 +177,7 @@ def get_emotion_score(faces: Sequence[np.ndarray], model) -> Dict[str, Any]:
     if not totals:
         return {"label": "none", "confidence": 0.0, "details": details}
 
-    # Choose label with max total weight
     best_label = max(totals.items(), key=lambda t: t[1])[0]
-    # Mean confidence for this label
     mean_conf = totals[best_label] / counts[best_label]
     mean_conf = float(np.clip(mean_conf, 0.0, 1.0))
 
@@ -205,7 +194,6 @@ def test_main(frames_dir: str = None, model_name: str = DEFAULT_MODEL) -> None:
         log.exception("face_detector import failed")
         raise
 
-    # find a sample frame
     patterns = ["*.jpg", "*.jpeg", "*.png"]
     sample = None
     for p in patterns:
@@ -230,7 +218,6 @@ def test_main(frames_dir: str = None, model_name: str = DEFAULT_MODEL) -> None:
         log.error("No faces detected in sample frame")
         return
 
-    # For test, use first face
     x, y, w, h = faces[0]
     face_crop = frame[y : y + h, x : x + w]
 
@@ -238,7 +225,6 @@ def test_main(frames_dir: str = None, model_name: str = DEFAULT_MODEL) -> None:
     label, confidence = predict_emotion(face_crop, model)
     log.info("Predicted emotion: %s (%.3f)", label, confidence)
 
-    # Annotate and write
     annotated = frame.copy()
     color = (0, 255, 0) if confidence >= 0.5 else (0, 140, 255)
     cv2.rectangle(annotated, (x, y), (x + w, y + h), color, 2)

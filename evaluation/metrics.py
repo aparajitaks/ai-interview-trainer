@@ -26,7 +26,6 @@ def compute_emotion_metric(emotion_score: Optional[float]) -> float:
         A float in [0,1].
     """
     s = _safe_float(emotion_score)
-    # Ensure numeric stability and clamp to [0,1]
     out = float(np.clip(s, 0.0, 1.0))
     log.debug("compute_emotion_metric: in=%s out=%s", emotion_score, out)
     return out

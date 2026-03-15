@@ -17,7 +17,6 @@ logging.basicConfig(level=logging.INFO)
 
 class SessionManager:
     def __init__(self) -> None:
-        # session_id -> session dict
         self._sessions: Dict[str, Dict[str, Any]] = {}
 
     def create_session(self, questions: List[str]) -> str:
@@ -49,10 +48,8 @@ class SessionManager:
             log.error("Session not found: %s", session_id)
             return
         s["answers"].append(inference_result)
-        # store score and feedback for convenience
         s["scores"].append(inference_result.get("final_score", 0.0))
         s["feedback"].extend(inference_result.get("feedback", []))
-        # advance question index
         s["current_q_idx"] = min(len(s["questions"]), s.get("current_q_idx", 0) + 1)
         log.info("Session %s recorded answer; advanced to idx=%d", session_id, s["current_q_idx"])
 
@@ -61,7 +58,6 @@ class SessionManager:
         if not s:
             log.error("Session not found: %s", session_id)
             return None
-        # Summarize
         summary = {
             "session_id": session_id,
             "created_at": s.get("created_at"),
@@ -70,7 +66,6 @@ class SessionManager:
             "mean_score": float(sum(s.get("scores", [])) / len(s.get("scores", []))) if s.get("scores") else 0.0,
             "feedback": list(dict.fromkeys(s.get("feedback", []))) , # dedupe preserving order
         }
-        # Optionally remove session from memory or keep for audit; here we keep it
         log.info("Ended session %s summary=%s", session_id, summary)
         return summary
 
