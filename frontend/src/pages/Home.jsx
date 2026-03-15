@@ -14,6 +14,14 @@ export default function Home() {
         >
           Start Interview
         </button>
+        <div className="mt-4">
+          <button
+            onClick={() => nav('/dashboard')}
+            className="px-5 py-2 bg-white/5 hover:bg-white/10 text-white rounded-md transition-colors"
+          >
+            Go to Dashboard
+          </button>
+        </div>
       </div>
     </div>
   )

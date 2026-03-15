@@ -1,4 +1,5 @@
 import React from 'react'
+import { useNavigate } from 'react-router-dom'
 import ScoreCard from '../components/ScoreCard'
 
 export default function Result({ result }) {
@@ -61,8 +62,24 @@ export default function Result({ result }) {
               </div>
             </div>
           </div>
+          <div className="mt-6 flex justify-center">
+            <DashboardButton />
+          </div>
         </div>
       </div>
     </div>
+  )
+}
+
+
+function DashboardButton() {
+  const navigate = useNavigate()
+  return (
+    <button
+      onClick={() => navigate('/dashboard')}
+      className="px-5 py-3 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-medium shadow-md transition-all duration-200"
+    >
+      Go to Dashboard
+    </button>
   )
 }
