@@ -61,6 +61,39 @@ export default function RecordControls({ stream }) {
         chunksRef.current = []
         mediaRecorderRef.current = null
         console.log('video recorded')
+
+        // Upload recorded video to backend analyze endpoint
+        ;(async () => {
+          try {
+            const formData = new FormData()
+            // append as 'video' per API contract
+            formData.append('video', blob, 'recording.webm')
+            console.log('sending video to http://127.0.0.1:8000/analyze')
+
+            const resp = await fetch('http://127.0.0.1:8000/analyze', {
+              method: 'POST',
+              body: formData,
+            })
+
+            if (!resp.ok) {
+              console.log('upload failed', resp.status, resp.statusText)
+              return
+            }
+
+            let data = null
+            try {
+              data = await resp.json()
+            } catch (e) {
+              // not JSON
+              const text = await resp.text()
+              data = { text }
+            }
+
+            console.log('analysis result', data)
+          } catch (err) {
+            console.log('upload failed', err)
+          }
+        })()
       }
 
       mr.start()
