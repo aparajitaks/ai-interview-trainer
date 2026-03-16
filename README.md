@@ -113,6 +113,44 @@ docker-compose up --build
 
 Build and run with Docker (no compose)
 ------------------------------------
+## Quick dev start
+
+To make development faster, this repository includes simple helper scripts and a Makefile.
+
+Backend (recommended — uses venv if present):
+
+```bash
+# from project root
+./run_backend.sh
+# or manually:
+source .venv/bin/activate
+python -m uvicorn api.main:app --reload
+```
+
+Frontend (Vite dev server):
+
+```bash
+# from project root
+./run_frontend.sh
+# or manually:
+cd frontend
+npm run dev -- --host
+```
+
+Makefile shortcuts (requires `make`):
+
+```bash
+make run-backend   # start backend with reload (foreground)
+make run-frontend  # start frontend dev server
+make run-all       # attempt to start both (runs commands in background)
+```
+
+Notes
+-----
+- The helper scripts don't change application behavior — they only set up the environment and run the dev servers with reload.
+- Ensure dependencies are installed before running the scripts (see "Run locally" section above).
+- The frontend dev server is exposed with `--host` so you can access it from other devices on your LAN if needed; remove `--host` for localhost-only binding.
+
 
 If you don't want to use docker-compose you can build and run the image directly. The examples below mount the host `./storage` into the container so the SQLite DB and uploaded videos persist outside the image.
 
