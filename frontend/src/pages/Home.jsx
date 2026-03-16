@@ -17,7 +17,7 @@ export default function Home() {
         <div className="mt-4">
           <button
             onClick={() => nav('/dashboard')}
-            className="px-5 py-2 bg-white/5 hover:bg-white/10 text-white rounded-md transition-colors"
+            className="px-5 py-2 rounded-md transition-all duration-200 bg-white/6 backdrop-blur-md border border-white/10 text-white hover:scale-105 hover:shadow-lg"
           >
             Go to Dashboard
           </button>

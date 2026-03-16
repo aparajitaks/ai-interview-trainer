@@ -5,6 +5,9 @@ import Interview from './pages/Interview'
 import Result from './pages/Result'
 import Loading from './pages/Loading'
 import Dashboard from './pages/Dashboard'
+import History from './pages/History'
+import Stats from './pages/Stats'
+import Settings from './pages/Settings'
 
 export default function App() {
   const [analysisResult, setAnalysisResult] = useState(null)
@@ -30,6 +33,9 @@ export default function App() {
           <Route path="/loading" element={<Loading />} />
           <Route path="/result" element={<Result result={analysisResult} />} />
           <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/history" element={<History />} />
+          <Route path="/stats" element={<Stats />} />
+          <Route path="/settings" element={<Settings />} />
         </Routes>
       </main>
     </div>

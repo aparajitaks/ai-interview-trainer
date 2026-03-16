@@ -77,7 +77,7 @@ function DashboardButton() {
   return (
     <button
       onClick={() => navigate('/dashboard')}
-      className="px-5 py-3 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-medium shadow-md transition-all duration-200"
+      className="px-5 py-3 rounded-lg bg-white/6 backdrop-blur-md border border-white/10 text-white font-medium shadow-md transition-all duration-200 hover:scale-105"
     >
       Go to Dashboard
     </button>
