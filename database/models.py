@@ -54,6 +54,20 @@ class AnswerResult(Base):
             return []
 
 
+class InterviewResult(Base):
+    __tablename__ = "interview_results"
+    id = Column(Integer, primary_key=True, index=True)
+    session_id = Column(String(64), ForeignKey("interview_sessions.session_id"), index=True, nullable=False)
+    score = Column(Float, nullable=False, default=0.0)
+    emotion_score = Column(Float, nullable=False, default=0.0)
+    posture_score = Column(Float, nullable=False, default=0.0)
+    eye_contact_score = Column(Float, nullable=False, default=0.0)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+
+    session = relationship("InterviewSession")
+
+
+
 if __name__ == "__main__":
     from database.db import init_db
 

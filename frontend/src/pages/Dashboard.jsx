@@ -1,8 +1,20 @@
-import React from 'react'
+import React, { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 
 export default function Dashboard() {
   const navigate = useNavigate()
+  const [stats, setStats] = useState(null)
+
+  useEffect(() => {
+    let mounted = true
+    fetch('http://127.0.0.1:8000/stats')
+      .then((r) => r.json())
+      .then((data) => mounted && setStats(data))
+      .catch((err) => console.error('Failed to load stats', err))
+    return () => {
+      mounted = false
+    }
+  }, [])
 
   const cards = [
     { key: 'start', title: 'Start Interview', desc: 'Begin a new practice interview', icon: '🎤', onClick: () => navigate('/interview') },
@@ -50,6 +62,22 @@ export default function Dashboard() {
               <div className="absolute inset-0 rounded-xl pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
             </div>
           ))}
+        </div>
+        
+        {/* Summary cards */}
+        <div className="mt-8 grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="rounded-xl p-4 bg-white/6 backdrop-blur-md border border-white/10 shadow-lg text-center">
+            <div className="text-sm text-slate-300">Total Interviews</div>
+            <div className="text-2xl font-bold text-white">{stats ? stats.total_interviews : '—'}</div>
+          </div>
+          <div className="rounded-xl p-4 bg-white/6 backdrop-blur-md border border-white/10 shadow-lg text-center">
+            <div className="text-sm text-slate-300">Average Score</div>
+            <div className="text-2xl font-bold text-white">{stats ? Math.round((stats.average_score ?? 0) * 100) : '—'}</div>
+          </div>
+          <div className="rounded-xl p-4 bg-white/6 backdrop-blur-md border border-white/10 shadow-lg text-center">
+            <div className="text-sm text-slate-300">Best Score</div>
+            <div className="text-2xl font-bold text-white">{stats ? Math.round((stats.best_score ?? 0) * 100) : '—'}</div>
+          </div>
         </div>
       </div>
     </div>

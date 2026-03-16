@@ -11,6 +11,7 @@ from config.settings import LOG_LEVEL, DB_PATH, STORAGE_DIR, EMOTION_MODEL
 from utils.logger import get_logger
 
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 from api.routes import interview as interview_router
 from api.routes import results as results_router
@@ -23,8 +24,24 @@ log = get_logger(__name__)
 def create_app() -> FastAPI:
     app = FastAPI(title="AI Interview Trainer API")
 
+    # Allow frontend dev server origins for local development
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+
     app.include_router(interview_router.router, prefix="/interview", tags=["interview"])
     app.include_router(results_router.router, prefix="/results", tags=["results"])
+    # stats router (returns aggregated stats at /stats)
+    try:
+        from api.routes import stats as stats_router
+
+        app.include_router(stats_router.router, prefix="/stats", tags=["stats"])
+    except Exception:
+        log.info("Stats router not available at startup")
     app.include_router(health_router.router)
 
     @app.on_event("startup")
@@ -73,6 +90,15 @@ def create_app() -> FastAPI:
                 log.info("Model preload disabled (AIIT_PRELOAD_MODELS not set)")
         except Exception:
             log.exception("Error during model preload/status setup")
+
+        # Ensure DB tables exist
+        try:
+            from database.db import init_db
+
+            init_db()
+            log.info("Database initialized on startup")
+        except Exception:
+            log.exception("Failed to initialize database on startup")
 
     return app
 

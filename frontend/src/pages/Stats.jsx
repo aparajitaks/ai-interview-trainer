@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 
 function StatCard({ title, value }) {
@@ -21,13 +21,23 @@ function StatCard({ title, value }) {
 
 export default function Stats() {
   const navigate = useNavigate()
+  const [stats, setStats] = useState(null)
+  const [loading, setLoading] = useState(true)
 
-  const stats = [
-    { id: 'emotion', title: 'Emotion Score', value: 82 },
-    { id: 'posture', title: 'Posture Score', value: 74 },
-    { id: 'eye', title: 'Eye Contact Score', value: 69 },
-    { id: 'final', title: 'Final Score', value: 78 },
-  ]
+  useEffect(() => {
+    let mounted = true
+    fetch('http://127.0.0.1:8000/stats')
+      .then((r) => r.json())
+      .then((data) => {
+        if (!mounted) return
+        setStats(data)
+      })
+      .catch((err) => console.error('Failed to load stats', err))
+      .finally(() => mounted && setLoading(false))
+    return () => {
+      mounted = false
+    }
+  }, [])
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 to-black p-8">
@@ -38,9 +48,17 @@ export default function Stats() {
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {stats.map((s) => (
-            <StatCard key={s.id} title={s.title} value={s.value} />
-          ))}
+          {loading ? (
+            <div className="text-slate-300">Loading...</div>
+          ) : stats ? (
+            <>
+              <StatCard title="Average Score" value={Math.round((stats.average_score ?? 0) * 100) || stats.average_score} />
+              <StatCard title="Best Score" value={Math.round((stats.best_score ?? 0) * 100) || stats.best_score} />
+              <StatCard title="Total Interviews" value={stats.total_interviews ?? 0} />
+            </>
+          ) : (
+            <div className="text-slate-300">No stats available.</div>
+          )}
         </div>
 
         <div className="mt-6 text-center">

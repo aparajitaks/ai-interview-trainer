@@ -31,8 +31,6 @@ def get_session_results(session_id: str):
     except Exception as exc:
         log.exception("Unhandled error in get_session_results: %s", exc)
         raise HTTPException(status_code=500, detail="Internal server error")
-
-
 @router.get("/analyze/{session_id}")
 def get_analyze_result(session_id: str):
     """Return stored analyze result for the given session id.
@@ -56,4 +54,20 @@ def get_analyze_result(session_id: str):
         raise
     except Exception as exc:
         log.exception("Unhandled error in get_analyze_result: %s", exc)
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+
+@router.get("/")
+def list_results():
+    try:
+        try:
+            rows = crud.list_interview_results()
+        except Exception:
+            log.exception("Failed to read interview results from DB")
+            raise HTTPException(status_code=500, detail="DB read failed")
+        return rows
+    except HTTPException:
+        raise
+    except Exception as exc:
+        log.exception("Unhandled error in list_results: %s", exc)
         raise HTTPException(status_code=500, detail="Internal server error")

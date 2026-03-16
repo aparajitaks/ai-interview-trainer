@@ -12,6 +12,7 @@ from typing import Dict, Any, List, Optional
 import json
 
 from sqlalchemy.orm import Session
+from sqlalchemy import func
 
 from database.db import SessionLocal, init_db
 from database import models
@@ -78,6 +79,66 @@ def get_results(session_id: str) -> List[Dict[str, Any]]:
         return [
             {"id": a.id, "question": a.question, "score": a.score, "feedback": a.get_feedback(), "created_at": a.created_at.isoformat()} for a in answers
         ]
+    finally:
+        db.close()
+
+
+def save_interview_result(session_id: str, score: float, emotion_score: float, posture_score: float, eye_contact_score: float) -> models.InterviewResult:
+    """Persist an aggregated interview result."""
+    db: Session = SessionLocal()
+    try:
+        # ensure session exists
+        sess = db.query(models.InterviewSession).filter_by(session_id=session_id).first()
+        if not sess:
+            sess = create_session(session_id)
+
+        ir = models.InterviewResult(
+            session_id=session_id,
+            score=float(score),
+            emotion_score=float(emotion_score),
+            posture_score=float(posture_score),
+            eye_contact_score=float(eye_contact_score),
+        )
+        db.add(ir)
+        db.commit()
+        db.refresh(ir)
+        log.info("Saved interview result for session=%s id=%d", session_id, ir.id)
+        return ir
+    finally:
+        db.close()
+
+
+def list_interview_results(limit: int = 100) -> List[Dict[str, Any]]:
+    """Return recent interview results."""
+    db: Session = SessionLocal()
+    try:
+        rows = db.query(models.InterviewResult).order_by(models.InterviewResult.created_at.desc()).limit(limit).all()
+        return [
+            {
+                "id": r.id,
+                "session_id": r.session_id,
+                "score": r.score,
+                "emotion_score": r.emotion_score,
+                "posture_score": r.posture_score,
+                "eye_contact_score": r.eye_contact_score,
+                "created_at": r.created_at.isoformat(),
+            }
+            for r in rows
+        ]
+    finally:
+        db.close()
+
+
+def get_stats() -> Dict[str, Any]:
+    """Return aggregated statistics: average, total, best."""
+    db: Session = SessionLocal()
+    try:
+        total = db.query(models.InterviewResult).count()
+        if total == 0:
+            return {"average_score": 0.0, "total_interviews": 0, "best_score": 0.0}
+        avg = db.query(models.InterviewResult).with_entities(func.avg(models.InterviewResult.score)).scalar()  # type: ignore
+        best = db.query(models.InterviewResult).with_entities(func.max(models.InterviewResult.score)).scalar()  # type: ignore
+        return {"average_score": float(avg or 0.0), "total_interviews": int(total), "best_score": float(best or 0.0)}
     finally:
         db.close()
 

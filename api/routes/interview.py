@@ -150,6 +150,20 @@ async def analyze_upload(file: UploadFile = File(...)):
         except Exception as exc:
             log.error("Failed to save upload answer for session=%s: %s", session_id, exc, exc_info=True)
 
+        try:
+            # Save aggregated interview result for quick access in history/stats
+            emotion = float(result.get("emotion_score", 0.0)) if isinstance(result, dict) else 0.0
+            posture = float(result.get("posture_score", 0.0)) if isinstance(result, dict) else 0.0
+            eye = float(result.get("eye_score", result.get("eye_contact_score", 0.0))) if isinstance(result, dict) else 0.0
+            # final_score may already be computed above
+            from database import crud as _crud
+
+            _crud.save_interview_result(session_id, final_score, emotion, posture, eye)
+            log.info("Saved InterviewResult for session=%s", session_id)
+        except Exception as exc:
+            log.error("Failed to save InterviewResult for session=%s: %s", session_id, exc, exc_info=True)
+        
+
         return {"session_id": session_id, "result": result}
     except HTTPException:
         raise
