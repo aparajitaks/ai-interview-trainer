@@ -28,6 +28,12 @@ Base = declarative_base()
 def init_db() -> None:
     """Create database tables. Call at application startup or in tests."""
     from . import models  # ensure models are imported so they are registered on Base
+    # import advanced models for the session system
+    try:
+        from . import advanced_models  # noqa: F401
+    except Exception:
+        # advanced models may not exist in older versions; ignore failures
+        pass
 
     log.info("Initializing database and creating tables (if not exist)")
     Base.metadata.create_all(bind=engine)
