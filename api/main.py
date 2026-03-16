@@ -35,6 +35,13 @@ def create_app() -> FastAPI:
 
     app.include_router(interview_router.router, prefix="/interview", tags=["interview"])
     app.include_router(results_router.router, prefix="/results", tags=["results"])
+    # Compatibility: expose /analyze endpoints at root for older frontend paths
+    try:
+        from api.routes import analyze_compat
+
+        app.include_router(analyze_compat.router)
+    except Exception:
+        log.info("Analyze compatibility router not available")
     # stats router (returns aggregated stats at /stats)
     try:
         from api.routes import stats as stats_router
