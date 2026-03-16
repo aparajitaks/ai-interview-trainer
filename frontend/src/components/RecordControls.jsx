@@ -1,9 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react'
 
-export default function RecordControls({ stream, onAnalysisComplete, setLoading }) {
+export default function RecordControls({ stream, onAnalysisComplete, setLoading, setStatus }) {
   const [recording, setRecording] = useState(false)
   const [seconds, setSeconds] = useState(0)
   const [recordedBlob, setRecordedBlob] = useState(null)
+  // local busy flag to prevent multiple simultaneous uploads/records
+  const [busy, setBusy] = useState(false)
 
   const mediaRecorderRef = useRef(null)
   const chunksRef = useRef([])
@@ -19,8 +21,10 @@ export default function RecordControls({ stream, onAnalysisComplete, setLoading 
   }, [recording])
 
   const startRecording = () => {
+    if (busy) return
     if (!stream) {
       console.warn('No camera stream available to record')
+      if (typeof setStatus === 'function') setStatus('error')
       return
     }
 
@@ -45,6 +49,8 @@ export default function RecordControls({ stream, onAnalysisComplete, setLoading 
     }
 
     try {
+      setBusy(true)
+      if (typeof setStatus === 'function') setStatus('recording')
       const mr = new MediaRecorder(stream, options)
       mediaRecorderRef.current = mr
       chunksRef.current = []
@@ -71,7 +77,10 @@ export default function RecordControls({ stream, onAnalysisComplete, setLoading 
             } catch (e) {}
           }
 
+          if (typeof setStatus === 'function') setStatus('uploading')
+
           try {
+            console.log('upload start')
             const formData = new FormData()
             // append as 'video' per API contract
             formData.append('video', blob, 'recording.webm')
@@ -83,10 +92,23 @@ export default function RecordControls({ stream, onAnalysisComplete, setLoading 
             })
 
             if (!resp.ok) {
-              console.log('upload failed', resp.status, resp.statusText)
+              // try to get body text for debugging
+              let txt = ''
+              try {
+                txt = await resp.text()
+              } catch (_) {}
+              console.log('upload failed', resp.status, resp.statusText, txt)
+              if (typeof setStatus === 'function') setStatus('error')
+              // surface error to parent so UI can show it
+              if (typeof onAnalysisComplete === 'function') {
+                try {
+                  onAnalysisComplete({ error: `Server error ${resp.status}: ${resp.statusText} ${txt}` })
+                } catch (_) {}
+              }
               return
             }
 
+            // server performs analysis and returns result in response
             let data = null
             try {
               data = await resp.json()
@@ -96,7 +118,12 @@ export default function RecordControls({ stream, onAnalysisComplete, setLoading 
               data = { text }
             }
 
+            console.log('upload done')
+            console.log('result received')
             console.log('analysis result', data)
+            // mark analyzing/done states briefly
+            if (typeof setStatus === 'function') setStatus('analyzing')
+
             // notify parent component (Interview) if provided
             if (typeof onAnalysisComplete === 'function') {
               try {
@@ -105,8 +132,16 @@ export default function RecordControls({ stream, onAnalysisComplete, setLoading 
                 // ignore
               }
             }
+
+            if (typeof setStatus === 'function') setStatus('done')
           } catch (err) {
             console.log('upload failed', err)
+            if (typeof setStatus === 'function') setStatus('error')
+            if (typeof onAnalysisComplete === 'function') {
+              try {
+                onAnalysisComplete({ error: String(err) })
+              } catch (_) {}
+            }
           } finally {
             // ensure loading is cleared if onAnalysisComplete did not already handle it
             // (Interview's handler will attempt to clear loading as well)
@@ -115,6 +150,7 @@ export default function RecordControls({ stream, onAnalysisComplete, setLoading 
                 setLoading(false)
               } catch (e) {}
             }
+            setBusy(false)
           }
         })()
       }
@@ -123,6 +159,10 @@ export default function RecordControls({ stream, onAnalysisComplete, setLoading 
       setRecording(true)
     } catch (err) {
       console.error('MediaRecorder start failed', err)
+      // if starting the recorder failed, clear busy so UI isn't stuck
+      try {
+        setBusy(false)
+      } catch (_) {}
     }
   }
 
@@ -135,6 +175,7 @@ export default function RecordControls({ stream, onAnalysisComplete, setLoading 
       }
     }
     setRecording(false)
+    if (typeof setStatus === 'function') setStatus('idle')
   }
 
   return (
@@ -143,7 +184,8 @@ export default function RecordControls({ stream, onAnalysisComplete, setLoading 
         <button
           onClick={startRecording}
           aria-pressed={recording}
-          className="flex items-center justify-center w-14 h-14 rounded-full bg-red-600 hover:bg-red-500 text-white shadow-md"
+          disabled={recording || busy}
+          className={`flex items-center justify-center w-14 h-14 rounded-full text-white shadow-md ${recording || busy ? 'bg-red-400 cursor-not-allowed' : 'bg-red-600 hover:bg-red-500'}`}
           title="Start recording"
         >
           {/* red circle */}
@@ -154,7 +196,8 @@ export default function RecordControls({ stream, onAnalysisComplete, setLoading 
 
         <button
           onClick={stopRecording}
-          className="flex items-center justify-center w-14 h-14 rounded-full bg-gray-700 hover:bg-gray-600 text-white shadow-sm"
+          disabled={!recording}
+          className={`flex items-center justify-center w-14 h-14 rounded-full text-white shadow-sm ${!recording ? 'bg-gray-600 cursor-not-allowed' : 'bg-gray-700 hover:bg-gray-600'}`}
           title="Stop recording"
         >
           <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">

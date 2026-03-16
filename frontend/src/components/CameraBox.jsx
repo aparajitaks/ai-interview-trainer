@@ -18,6 +18,7 @@ export default function CameraBox({ onStreamAvailable }) {
         const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: false })
         if (!mounted) return
         streamRef.current = stream
+        console.log('camera: stream started')
         if (videoRef.current) {
           videoRef.current.srcObject = stream
           // try play (some browsers require a user gesture; this is best-effort)
@@ -34,7 +35,15 @@ export default function CameraBox({ onStreamAvailable }) {
         }
       } catch (err) {
         console.error('getUserMedia error', err)
-        setError('Unable to access camera')
+        console.log('camera: failed to start')
+        // give a clearer message for common permission errors
+        if (err && err.name === 'NotAllowedError') {
+          setError('Camera permission denied')
+        } else if (err && err.name === 'NotFoundError') {
+          setError('No camera found')
+        } else {
+          setError('Unable to access camera')
+        }
       }
     }
 

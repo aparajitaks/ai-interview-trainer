@@ -11,7 +11,28 @@ export default function Result({ result }) {
     feedback: [],
   }
 
-  const pct = (v) => Math.round((v ?? 0) * 100)
+  // normalize percentage-like values: accept either 0..1 or 0..100 inputs
+  const pct = (v) => {
+    const val = v ?? 0
+    if (val > 1) return Math.round(val)
+    return Math.round(val * 100)
+  }
+
+  if (result && result.error) {
+    return (
+      <div className="min-h-[60vh] flex items-center justify-center">
+        <div className="w-full max-w-2xl px-6">
+          <div className="bg-red-900/30 border border-red-800 rounded-2xl p-8 shadow-md text-center">
+            <h2 className="text-2xl font-semibold mb-2">Analysis failed</h2>
+            <p className="text-sm text-red-200 mb-4">{String(result.error || 'An unknown error occurred during analysis.')}</p>
+            <div>
+              <button onClick={() => window.history.back()} className="px-4 py-2 rounded bg-white/6 text-white">Back</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-[60vh] flex items-center justify-center">

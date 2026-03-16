@@ -4,7 +4,7 @@ import CameraBox from '../components/CameraBox'
 import QuestionBox from '../components/QuestionBox'
 import RecordControls from '../components/RecordControls'
 
-export default function Interview({ setAnalysisResult, setLoading, loading }) {
+export default function Interview({ setAnalysisResult, setLoading, loading, setStatus }) {
   // lift camera stream to parent so both CameraBox and RecordControls can share it
   const [cameraStream, setCameraStream] = useState(null)
 
@@ -59,7 +59,7 @@ export default function Interview({ setAnalysisResult, setLoading, loading }) {
       {/* Bottom controls */}
       <footer className="w-full border-t border-slate-800 bg-slate-950/20">
         <div className="max-w-7xl mx-auto px-6 py-4">
-          <RecordControls stream={cameraStream} onAnalysisComplete={handleAnalysisComplete} setLoading={setLoading} />
+          <RecordControls stream={cameraStream} onAnalysisComplete={handleAnalysisComplete} setLoading={setLoading} setStatus={setStatus} />
         </div>
       </footer>
     </div>

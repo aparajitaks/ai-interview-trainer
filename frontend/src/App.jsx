@@ -12,6 +12,8 @@ import Settings from './pages/Settings'
 export default function App() {
   const [analysisResult, setAnalysisResult] = useState(null)
   const [loading, setLoading] = useState(false)
+  // more granular UI status for the loading screen: 'idle'|'recording'|'uploading'|'analyzing'|'error'|'done'
+  const [status, setStatus] = useState('idle')
 
   return (
     <div className="min-h-screen bg-gray-900 text-gray-100 font-sans">
@@ -29,8 +31,11 @@ export default function App() {
       <main className="container mx-auto p-6">
         <Routes>
           <Route path="/" element={<Home />} />
-          <Route path="/interview" element={<Interview setAnalysisResult={setAnalysisResult} loading={loading} setLoading={setLoading} />} />
-          <Route path="/loading" element={<Loading />} />
+          <Route
+            path="/interview"
+            element={<Interview setAnalysisResult={setAnalysisResult} loading={loading} setLoading={setLoading} setStatus={setStatus} />}
+          />
+          <Route path="/loading" element={<Loading status={status} />} />
           <Route path="/result" element={<Result result={analysisResult} />} />
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/history" element={<History />} />

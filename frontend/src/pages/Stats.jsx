@@ -26,14 +26,25 @@ export default function Stats() {
 
   useEffect(() => {
     let mounted = true
-    fetch('http://127.0.0.1:8000/stats')
-      .then((r) => r.json())
-      .then((data) => {
+    ;(async () => {
+      try {
+        console.log('stats: loading')
+        const resp = await fetch('http://127.0.0.1:8000/stats')
+        if (!mounted) return
+        if (!resp.ok) {
+          const txt = await resp.text().catch(() => '')
+          console.error('Failed to load stats - server error', resp.status, resp.statusText, txt)
+          return
+        }
+        const data = await resp.json().catch(() => null)
         if (!mounted) return
         setStats(data)
-      })
-      .catch((err) => console.error('Failed to load stats', err))
-      .finally(() => mounted && setLoading(false))
+      } catch (err) {
+        console.error('Failed to load stats', err)
+      } finally {
+        if (mounted) setLoading(false)
+      }
+    })()
     return () => {
       mounted = false
     }

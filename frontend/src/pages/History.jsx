@@ -8,16 +8,27 @@ export default function History() {
 
   useEffect(() => {
     let mounted = true
-    fetch('http://127.0.0.1:8000/results')
-      .then((r) => r.json())
-      .then((data) => {
+    ;(async () => {
+      try {
+        console.log('history: loading')
+        const resp = await fetch('http://127.0.0.1:8000/results')
+        if (!mounted) return
+        if (!resp.ok) {
+          const txt = await resp.text().catch(() => '')
+          console.error('Failed to load history - server error', resp.status, resp.statusText, txt)
+          setItems([])
+          return
+        }
+        const data = await resp.json().catch(() => [])
         if (!mounted) return
         setItems(data || [])
-      })
-      .catch((err) => {
+      } catch (err) {
         console.error('Failed to load history', err)
-      })
-      .finally(() => mounted && setLoading(false))
+        setItems([])
+      } finally {
+        if (mounted) setLoading(false)
+      }
+    })()
     return () => {
       mounted = false
     }
