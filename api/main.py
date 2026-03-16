@@ -49,6 +49,13 @@ def create_app() -> FastAPI:
         app.include_router(stats_router.router, prefix="/stats", tags=["stats"])
     except Exception:
         log.info("Stats router not available at startup")
+    # session router for advanced interview flows
+    try:
+        from api.routes import session as session_router
+
+        app.include_router(session_router.router)
+    except Exception:
+        log.info("Session router not available at startup")
     app.include_router(health_router.router)
 
     @app.on_event("startup")

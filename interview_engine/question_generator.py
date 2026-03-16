@@ -1,3 +1,25 @@
+from __future__ import annotations
+from typing import List
+
+def generate_question(role: str, history: List[str]) -> str:
+    """Return a generated question based on role and history.
+
+    This is a temporary mock implementation. It returns deterministic
+    questions from a small pool. A real implementation could call an LLM.
+    """
+    base_questions = [
+        "Tell me about yourself.",
+        "Why are you interested in this role?",
+        "Describe a challenge you faced and how you resolved it.",
+        "How do you prioritize tasks when working under pressure?",
+        "Where do you see yourself in five years?",
+        "Tell me about a time you received critical feedback.",
+        "How would you handle a disagreement with a coworker?",
+        "Describe a project you are proud of.",
+    ]
+
+    idx = len(history) % len(base_questions)
+    return base_questions[idx]
 """Simple question generator for interview sessions.
 
 This module currently provides a static list of questions and a simple
