@@ -1,3 +1,207 @@
+import React, { useState, useCallback } from 'react'
+import CameraBox from '../components/CameraBox'
+import RecordControls from '../components/RecordControls'
+
+export default function InterviewSession() {
+  const [sessionId, setSessionId] = useState(null)
+  const [question, setQuestion] = useState(null)
+  const [questionIndex, setQuestionIndex] = useState(null)
+  const [questionId, setQuestionId] = useState(null)
+  const [stream, setStream] = useState(null)
+  const [loading, setLoading] = useState(false)
+  const [status, setStatus] = useState('idle')
+  const [answers, setAnswers] = useState([])
+
+  const startSession = async () => {
+    setLoading(true)
+    setStatus('starting')
+    try {
+      const resp = await fetch('http://127.0.0.1:8000/session/start', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+      })
+      if (!resp.ok) {
+        const txt = await resp.text().catch(() => '')
+        setStatus('error')
+        console.error('start session failed', resp.status, txt)
+        alert('Failed to start session')
+        return
+      }
+      const data = await resp.json()
+      setSessionId(data.session_id)
+      setQuestion(data.question)
+      setQuestionIndex(data.question_index)
+      setQuestionId(data.question_id)
+      setStatus('ready')
+    } catch (err) {
+      console.error('start session error', err)
+      setStatus('error')
+      alert('Failed to start session')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const onStreamAvailable = useCallback((s) => {
+    setStream(s)
+  }, [])
+
+  // onAnalysisComplete receives the JSON returned by /analyze (or error)
+  const onAnalysisComplete = async (data) => {
+    // ensure parent UI state
+    setLoading(false)
+    if (!sessionId) {
+      console.warn('no session; ignoring analysis result')
+      return
+    }
+
+    if (data && data.error) {
+      setStatus('error')
+      alert('Analysis failed: ' + data.error)
+      return
+    }
+
+    // the /analyze endpoint returns either { result: {...} , session_id } or the raw result
+    const analysis = (data && data.result) ? data.result : data || {}
+
+    // map various possible field names to the answer API contract
+    const score = parseFloat(analysis.final_score ?? analysis.score ?? 0.0) || 0.0
+    const emotion_score = parseFloat(analysis.emotion_score ?? analysis.emotion ?? 0.0) || 0.0
+    const posture_score = parseFloat(analysis.posture_score ?? analysis.posture ?? 0.0) || 0.0
+    const eye_score = parseFloat(analysis.eye_score ?? analysis.eye_contact_score ?? 0.0) || 0.0
+
+    // persist the answer to session API
+    try {
+      setStatus('saving')
+      const payload = {
+        session_id: sessionId,
+        question_id: questionId,
+        score,
+        emotion_score,
+        posture_score,
+        eye_score,
+      }
+
+      const resp = await fetch('http://127.0.0.1:8000/session/answer', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+
+      if (!resp.ok) {
+        const txt = await resp.text().catch(() => '')
+        console.error('failed to save answer', resp.status, txt)
+        setStatus('error')
+        alert('Failed to save answer')
+        return
+      }
+
+      // add to local answers list for UI
+      setAnswers((a) => [...a, { questionIndex, questionId, score, emotion_score, posture_score, eye_score }])
+
+      // request next question
+      setStatus('fetching_next')
+      const nxt = await fetch('http://127.0.0.1:8000/session/next', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ session_id: sessionId }),
+      })
+
+      if (!nxt.ok) {
+        const txt = await nxt.text().catch(() => '')
+        console.error('failed to get next question', nxt.status, txt)
+        setStatus('error')
+        alert('Failed to get next question')
+        return
+      }
+
+      const nextData = await nxt.json()
+      if (nextData.done) {
+        // finish session
+        setStatus('finishing')
+        const fin = await fetch('http://127.0.0.1:8000/session/finish', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ session_id: sessionId }),
+        })
+        if (fin.ok) {
+          const finData = await fin.json()
+          setStatus('done')
+          alert('Session finished: ' + JSON.stringify(finData.summary || finData))
+        } else {
+          const txt = await fin.text().catch(() => '')
+          console.error('failed to finish session', fin.status, txt)
+          setStatus('error')
+          alert('Failed to finish session')
+        }
+        return
+      }
+
+      // otherwise set next question
+      setQuestion(nextData.question)
+      setQuestionIndex(nextData.question_index)
+      setQuestionId(nextData.question_id)
+      setStatus('ready')
+    } catch (err) {
+      console.error('onAnalysisComplete error', err)
+      setStatus('error')
+      alert('Internal error saving answer or fetching next')
+    }
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <h2 className="text-2xl font-semibold">Interview Session</h2>
+        <div>
+          {!sessionId ? (
+            <button onClick={startSession} className="px-4 py-2 bg-indigo-600 rounded hover:bg-indigo-500">Start Session</button>
+          ) : (
+            <span className="text-sm text-gray-400">Session: {sessionId}</span>
+          )}
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="col-span-2">
+          <div className="mb-4">
+            <div className="text-lg font-medium">Question {questionIndex ?? '-'}</div>
+            <div className="mt-2 text-gray-200 text-xl">{question ?? 'Press "Start Session" to begin.'}</div>
+          </div>
+
+          <div className="bg-gray-800 rounded-lg p-4">
+            <CameraBox onStreamAvailable={onStreamAvailable} />
+            <div className="mt-4 flex items-center justify-center">
+              <RecordControls
+                stream={stream}
+                onAnalysisComplete={onAnalysisComplete}
+                setLoading={setLoading}
+                setStatus={setStatus}
+              />
+            </div>
+            <div className="mt-3 text-sm text-gray-400">Status: {status}</div>
+          </div>
+        </div>
+
+        <aside className="bg-gray-800 p-4 rounded-lg">
+          <h3 className="text-lg font-medium mb-2">Answers</h3>
+          {answers.length === 0 ? (
+            <div className="text-sm text-gray-400">No answers yet</div>
+          ) : (
+            <ul className="space-y-2 text-sm">
+              {answers.map((a, idx) => (
+                <li key={idx} className="p-2 bg-gray-900 rounded">
+                  Q{a.questionIndex} — score: {a.score.toFixed(2)} (emotion {a.emotion_score.toFixed(2)}, posture {a.posture_score.toFixed(2)}, eye {a.eye_score.toFixed(2)})
+                </li>
+              ))}
+            </ul>
+          )}
+        </aside>
+      </div>
+    </div>
+  )
+}
 import React, { useState, useEffect } from 'react'
 import CameraBox from '../components/CameraBox'
 import RecordControls from '../components/RecordControls'
