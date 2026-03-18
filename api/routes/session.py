@@ -5,6 +5,19 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from uuid import uuid4
 from typing import Optional
+from pathlib import Path
+import tempfile
+from config.settings import STORAGE_DIR
+
+try:
+    from audio_models.whisper_model import WhisperModel
+except Exception:
+    WhisperModel = None
+
+try:
+    from interview_engine.keyword_detector import detect_keywords
+except Exception:
+    detect_keywords = None
 
 from database import session_crud
 from interview_engine.question_generator import generate_question
@@ -36,6 +49,7 @@ class AnswerRequest(BaseModel):
     posture_score: float
     eye_score: float
     answer_text: Optional[str] = None
+    video_path: Optional[str] = None
 
 
 @router.post("/session/start", response_model=StartResponse)
@@ -81,10 +95,48 @@ def next_question(req: NextRequest):
 @router.post("/session/answer")
 def submit_answer(req: AnswerRequest):
     try:
-        # persist answer (optionally with text and keywords if provided)
-        # keyword detection may run on the generator side; store what we got from client here
-        session_crud.save_answer(req.session_id, req.question_id, req.score, req.emotion_score, req.posture_score, req.eye_score, answer_text=req.answer_text, keywords=None)
-        return {"status": "ok"}
+        # If client didn't provide answer_text but provided a video, try to
+        # extract audio and run Whisper transcription.
+        final_text = req.answer_text
+        detected = None
+
+        # Determine role for keyword detection context
+        sess_meta = session_crud.get_session(req.session_id) or {}
+        role = sess_meta.get("role") if isinstance(sess_meta, dict) else None
+
+        if not final_text and req.video_path:
+            try:
+                # Extract audio using the existing preprocessing helper
+                from preprocessing.audio_extract import extract_audio
+                from utils.storage_manager import get_storage_dir, generate_filename
+
+                storage_dir = get_storage_dir()
+                # generate a wav filename and place it in storage dir
+                wav_name = generate_filename("wav")
+                wav_path = storage_dir / wav_name
+
+                extract_audio(str(req.video_path), str(wav_path))
+
+                if WhisperModel is not None:
+                    wm = WhisperModel()
+                    tr = wm.transcribe(str(wav_path))
+                    final_text = tr.get("text") if isinstance(tr, dict) else None
+                else:
+                    # Whisper not available — leave final_text None
+                    final_text = None
+            except Exception:
+                log.exception("Transcription attempt failed for session=%s", req.session_id)
+
+        # Run simple keyword detection if we have text
+        if final_text and detect_keywords:
+            try:
+                detected = detect_keywords(role or "", final_text)
+            except Exception:
+                log.exception("Keyword detection failed for session=%s", req.session_id)
+
+        # Persist answer with optional text and detected keywords
+        session_crud.save_answer(req.session_id, req.question_id, req.score, req.emotion_score, req.posture_score, req.eye_score, answer_text=final_text, keywords=detected)
+        return {"status": "ok", "transcription": final_text, "keywords": detected}
     except Exception as exc:
         log.exception("Failed to save answer: %s", exc)
         raise HTTPException(status_code=500, detail="Failed to save answer")

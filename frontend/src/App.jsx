@@ -1,8 +1,10 @@
 import React, { useState } from 'react'
 import { Routes, Route, Link } from 'react-router-dom'
 import Home from './pages/Home'
+import RoleSelect from './pages/RoleSelect'
 import Interview from './pages/Interview'
 import Result from './pages/Result'
+import Results from './pages/Results'
 import Loading from './pages/Loading'
 import Dashboard from './pages/Dashboard'
 import History from './pages/History'
@@ -23,8 +25,10 @@ export default function App() {
           <Link to="/" className="text-lg font-semibold">AI Interview Trainer</Link>
           <div className="space-x-3">
             <Link to="/" className="text-sm text-gray-300 hover:text-white">Home</Link>
+            <Link to="/role" className="text-sm text-gray-300 hover:text-white">Role</Link>
             <Link to="/interview" className="text-sm text-gray-300 hover:text-white">Interview</Link>
             <Link to="/result" className="text-sm text-gray-300 hover:text-white">Result</Link>
+            <Link to="/results" className="text-sm text-gray-300 hover:text-white">My Results</Link>
           </div>
         </div>
       </nav>
@@ -32,12 +36,14 @@ export default function App() {
       <main className="container mx-auto p-6">
         <Routes>
           <Route path="/" element={<Home />} />
+          <Route path="/role" element={<RoleSelect />} />
           <Route
             path="/interview"
             element={<Interview setAnalysisResult={setAnalysisResult} loading={loading} setLoading={setLoading} setStatus={setStatus} />}
           />
           <Route path="/loading" element={<Loading status={status} />} />
           <Route path="/result" element={<Result result={analysisResult} />} />
+          <Route path="/results" element={<Results />} />
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/session" element={<InterviewSession />} />
           <Route path="/history" element={<History />} />

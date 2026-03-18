@@ -1,6 +1,7 @@
-import React, { useState, useCallback } from 'react'
+import React, { useState, useCallback, useEffect } from 'react'
 import CameraBox from '../components/CameraBox'
 import RecordControls from '../components/RecordControls'
+import { useNavigate } from 'react-router-dom'
 
 export default function InterviewSession() {
   const [sessionId, setSessionId] = useState(null)
@@ -12,6 +13,17 @@ export default function InterviewSession() {
   const [status, setStatus] = useState('idle')
   const [answers, setAnswers] = useState([])
   const [busy, setBusy] = useState(false)
+  const navigate = useNavigate()
+
+  useEffect(() => {
+    // if navigated from role selection, prefill session info
+    const sid = sessionStorage.getItem('aiit_session_id')
+    const q = sessionStorage.getItem('aiit_question')
+    const qid = sessionStorage.getItem('aiit_question_id')
+    if (sid) setSessionId(sid)
+    if (q) setQuestion(q)
+    if (qid) setQuestionId(qid)
+  }, [])
 
   const startSession = async () => {
     if (loading || busy || sessionId) return
@@ -202,10 +214,10 @@ export default function InterviewSession() {
         }
 
         if (fin.ok) {
-          const finData = await fin.json().catch(() => null)
+          // navigate to results page which will fetch finalized summary
           setStatus('done')
           console.log('session finished')
-          alert('Session finished: ' + JSON.stringify(finData?.summary || finData || {}))
+          navigate('/results')
         } else {
           const txt = await fin.text().catch(() => '')
           console.error('failed to finish session', fin.status, txt)
