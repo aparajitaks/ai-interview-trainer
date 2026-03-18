@@ -69,6 +69,28 @@ def save_answer(session_id: str, question_id: int, score: float, emotion: float,
         db.close()
 
 
+def save_feedback(answer_id: int, feedback: list) -> advanced_models.AdvancedInterviewAnswer:
+    """Persist LLM-generated feedback (list of strings) for a given answer row."""
+    db: Session = SessionLocal()
+    try:
+        a = db.query(advanced_models.AdvancedInterviewAnswer).filter_by(id=answer_id).first()
+        if not a:
+            raise ValueError(f"Answer id={answer_id} not found")
+        try:
+            import json
+
+            a.feedback = json.dumps(feedback or [])
+        except Exception:
+            a.feedback = None
+        db.add(a)
+        db.commit()
+        db.refresh(a)
+        log.info("Saved feedback for answer id=%d", a.id)
+        return a
+    finally:
+        db.close()
+
+
 def get_session(session_id: str) -> Optional[Dict[str, Any]]:
     db: Session = SessionLocal()
     try:
@@ -109,7 +131,8 @@ def get_answers(session_id: str) -> List[Dict[str, Any]]:
                 "posture_score": r.posture_score,
                 "eye_score": r.eye_score,
                 "answer_text": r.answer_text,
-                "keywords": kws,
+            "keywords": kws,
+            "feedback": (json.loads(r.feedback) if r.feedback else None) if isinstance(getattr(r, 'feedback', None), (str, bytes)) else r.feedback,
                 "created_at": r.created_at.isoformat(),
             })
         return out

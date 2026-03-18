@@ -21,6 +21,10 @@ except Exception:
 
 from database import session_crud
 from interview_engine.question_generator import generate_question
+try:
+    from evaluation.llm_feedback import get_generator
+except Exception:
+    get_generator = None
 
 log = logging.getLogger(__name__)
 router = APIRouter()
@@ -150,6 +154,34 @@ def finish_session(req: NextRequest):
             return {"summary": {"total_questions": 0}}
         total = len(answers)
         avg_score = sum(a["score"] for a in answers) / total if total else 0.0
+        # Attempt to generate LLM feedback for each answer if not already present
+        role = None
+        try:
+            sess_meta = session_crud.get_session(req.session_id) or {}
+            role = sess_meta.get("role") if isinstance(sess_meta, dict) else None
+        except Exception:
+            role = None
+
+        if get_generator is not None:
+            try:
+                gen = get_generator()
+                for a in answers:
+                    if a.get("feedback"):
+                        continue
+                    try:
+                        fb = gen.generate_feedback(role, a)
+                        # Persist feedback to DB (save_feedback will JSON-encode)
+                        try:
+                            session_crud.save_feedback(a["id"], fb)
+                        except Exception:
+                            # If saving fails, still attach to response
+                            pass
+                        a["feedback"] = fb
+                    except Exception:
+                        log.exception("Failed to generate feedback for answer id=%s", a.get("id"))
+            except Exception:
+                log.exception("Failed to initialize feedback generator")
+
         return {"summary": {"total_questions": total, "average_score": avg_score}, "answers": answers}
     except Exception as exc:
         log.exception("Failed to finish session: %s", exc)

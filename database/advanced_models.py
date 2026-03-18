@@ -40,4 +40,6 @@ class AdvancedInterviewAnswer(Base):
     # store raw answer text (optional) and detected keywords
     answer_text = Column(Text, nullable=True)
     keywords = Column(Text, nullable=True)
+    # LLM-generated feedback stored as JSON list (strings)
+    feedback = Column(Text, nullable=True)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)

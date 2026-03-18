@@ -51,6 +51,8 @@ def init_db() -> None:
                     needs.append("ALTER TABLE adv_interview_answers ADD COLUMN answer_text TEXT")
                 if 'keywords' not in cols:
                     needs.append("ALTER TABLE adv_interview_answers ADD COLUMN keywords TEXT")
+                if 'feedback' not in cols:
+                    needs.append("ALTER TABLE adv_interview_answers ADD COLUMN feedback TEXT")
                 for stmt in needs:
                     try:
                         conn.exec_driver_sql(stmt)
