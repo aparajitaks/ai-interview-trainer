@@ -11,16 +11,29 @@ export default function InterviewSession() {
   const [loading, setLoading] = useState(false)
   const [status, setStatus] = useState('idle')
   const [answers, setAnswers] = useState([])
+  const [busy, setBusy] = useState(false)
 
   const startSession = async () => {
+    if (loading || busy || sessionId) return
+    setBusy(true)
     setLoading(true)
     setStatus('starting')
+    console.log('session start')
     try {
-      const resp = await fetch('http://127.0.0.1:8000/session/start', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({}),
-      })
+      let resp
+      try {
+        resp = await fetch('http://127.0.0.1:8000/session/start', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({}),
+        })
+      } catch (err) {
+        console.error('session start fetch failed', err)
+        setStatus('error')
+        alert('Failed to start session (network)')
+        return
+      }
+
       if (!resp.ok) {
         const txt = await resp.text().catch(() => '')
         setStatus('error')
@@ -28,18 +41,30 @@ export default function InterviewSession() {
         alert('Failed to start session')
         return
       }
-      const data = await resp.json()
+
+      let data = null
+      try {
+        data = await resp.json()
+      } catch (err) {
+        console.error('failed to parse session start response', err)
+        setStatus('error')
+        alert('Failed to start session (bad response)')
+        return
+      }
+
       setSessionId(data.session_id)
       setQuestion(data.question)
-      setQuestionIndex(data.question_index)
-      setQuestionId(data.question_id)
+      setQuestionIndex(data.question_index ?? data.questionIndex ?? null)
+      setQuestionId(data.question_id ?? data.questionId ?? null)
       setStatus('ready')
+      console.log('question loaded', data.question, 'index', data.question_index ?? data.questionIndex)
     } catch (err) {
       console.error('start session error', err)
       setStatus('error')
       alert('Failed to start session')
     } finally {
       setLoading(false)
+      setBusy(false)
     }
   }
 
@@ -49,12 +74,21 @@ export default function InterviewSession() {
 
   // onAnalysisComplete receives the JSON returned by /analyze (or error)
   const onAnalysisComplete = async (data) => {
+    // prevent re-entrancy
+    if (busy) {
+      console.warn('onAnalysisComplete called while busy')
+      return
+    }
+    setBusy(true)
     // ensure parent UI state
     setLoading(false)
     if (!sessionId) {
       console.warn('no session; ignoring analysis result')
+      setBusy(false)
       return
     }
+
+    console.log('record done')
 
     if (data && data.error) {
       setStatus('error')
@@ -83,70 +117,116 @@ export default function InterviewSession() {
         eye_score,
       }
 
-      const resp = await fetch('http://127.0.0.1:8000/session/answer', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      })
+      let resp
+      try {
+        resp = await fetch('http://127.0.0.1:8000/session/answer', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        })
+      } catch (err) {
+        console.error('save answer fetch failed', err)
+        setStatus('error')
+        alert('Failed to save answer (network)')
+        setBusy(false)
+        return
+      }
 
       if (!resp.ok) {
         const txt = await resp.text().catch(() => '')
         console.error('failed to save answer', resp.status, txt)
         setStatus('error')
         alert('Failed to save answer')
+        setBusy(false)
         return
       }
 
+      console.log('answer saved')
       // add to local answers list for UI
       setAnswers((a) => [...a, { questionIndex, questionId, score, emotion_score, posture_score, eye_score }])
 
       // request next question
       setStatus('fetching_next')
-      const nxt = await fetch('http://127.0.0.1:8000/session/next', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ session_id: sessionId }),
-      })
+      let nxt
+      try {
+        nxt = await fetch('http://127.0.0.1:8000/session/next', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ session_id: sessionId }),
+        })
+      } catch (err) {
+        console.error('next question fetch failed', err)
+        setStatus('error')
+        alert('Failed to get next question (network)')
+        setBusy(false)
+        return
+      }
 
       if (!nxt.ok) {
         const txt = await nxt.text().catch(() => '')
         console.error('failed to get next question', nxt.status, txt)
         setStatus('error')
         alert('Failed to get next question')
+        setBusy(false)
         return
       }
 
-      const nextData = await nxt.json()
+      let nextData = null
+      try {
+        nextData = await nxt.json()
+      } catch (err) {
+        console.error('failed to parse next question response', err)
+        setStatus('error')
+        alert('Failed to get next question (bad response)')
+        setBusy(false)
+        return
+      }
+
+      console.log('next question')
       if (nextData.done) {
         // finish session
         setStatus('finishing')
-        const fin = await fetch('http://127.0.0.1:8000/session/finish', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ session_id: sessionId }),
-        })
+        let fin
+        try {
+          fin = await fetch('http://127.0.0.1:8000/session/finish', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ session_id: sessionId }),
+          })
+        } catch (err) {
+          console.error('finish session fetch failed', err)
+          setStatus('error')
+          alert('Failed to finish session (network)')
+          setBusy(false)
+          return
+        }
+
         if (fin.ok) {
-          const finData = await fin.json()
+          const finData = await fin.json().catch(() => null)
           setStatus('done')
-          alert('Session finished: ' + JSON.stringify(finData.summary || finData))
+          console.log('session finished')
+          alert('Session finished: ' + JSON.stringify(finData?.summary || finData || {}))
         } else {
           const txt = await fin.text().catch(() => '')
           console.error('failed to finish session', fin.status, txt)
           setStatus('error')
           alert('Failed to finish session')
         }
+        setBusy(false)
         return
       }
 
-      // otherwise set next question
+      // otherwise set next question (support both snake_case and camelCase)
       setQuestion(nextData.question)
-      setQuestionIndex(nextData.question_index)
-      setQuestionId(nextData.question_id)
+      setQuestionIndex(nextData.question_index ?? nextData.questionIndex ?? null)
+      setQuestionId(nextData.question_id ?? nextData.questionId ?? null)
       setStatus('ready')
+      setBusy(false)
     } catch (err) {
       console.error('onAnalysisComplete error', err)
       setStatus('error')
       alert('Internal error saving answer or fetching next')
+      setBusy(false)
     }
   }
 
