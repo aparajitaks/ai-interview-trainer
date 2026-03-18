@@ -37,4 +37,7 @@ class AdvancedInterviewAnswer(Base):
     emotion_score = Column(Float, nullable=False, default=0.0)
     posture_score = Column(Float, nullable=False, default=0.0)
     eye_score = Column(Float, nullable=False, default=0.0)
+    # store raw answer text (optional) and detected keywords
+    answer_text = Column(Text, nullable=True)
+    keywords = Column(Text, nullable=True)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)

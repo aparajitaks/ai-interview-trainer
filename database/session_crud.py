@@ -12,6 +12,11 @@ log = logging.getLogger(__name__)
 def create_session(session_id: str, role: Optional[str] = None) -> advanced_models.AdvancedInterviewSession:
     db: Session = SessionLocal()
     try:
+        # If session already exists, return it (idempotent create)
+        s = db.query(advanced_models.AdvancedInterviewSession).filter_by(session_id=session_id).first()
+        if s:
+            log.info("Session %s already exists - returning existing", session_id)
+            return s
         s = advanced_models.AdvancedInterviewSession(session_id=session_id, role=role)
         db.add(s)
         db.commit()
@@ -35,10 +40,26 @@ def create_question(session_id: str, index: int, question_text: str) -> advanced
         db.close()
 
 
-def save_answer(session_id: str, question_id: int, score: float, emotion: float, posture: float, eye: float):
+def save_answer(session_id: str, question_id: int, score: float, emotion: float, posture: float, eye: float, answer_text: str | None = None, keywords: list | None = None):
     db: Session = SessionLocal()
     try:
-        a = advanced_models.AdvancedInterviewAnswer(session_id=session_id, question_id=question_id, score=float(score), emotion_score=float(emotion), posture_score=float(posture), eye_score=float(eye))
+        kws = None
+        try:
+            import json
+            kws = json.dumps(keywords or [])
+        except Exception:
+            kws = None
+
+        a = advanced_models.AdvancedInterviewAnswer(
+            session_id=session_id,
+            question_id=question_id,
+            score=float(score),
+            emotion_score=float(emotion),
+            posture_score=float(posture),
+            eye_score=float(eye),
+            answer_text=answer_text,
+            keywords=kws,
+        )
         db.add(a)
         db.commit()
         db.refresh(a)
@@ -72,6 +93,25 @@ def get_answers(session_id: str) -> List[Dict[str, Any]]:
     db: Session = SessionLocal()
     try:
         rows = db.query(advanced_models.AdvancedInterviewAnswer).filter_by(session_id=session_id).order_by(advanced_models.AdvancedInterviewAnswer.created_at).all()
-        return [{"id": r.id, "question_id": r.question_id, "score": r.score, "emotion_score": r.emotion_score, "posture_score": r.posture_score, "eye_score": r.eye_score, "created_at": r.created_at.isoformat()} for r in rows]
+        out = []
+        import json
+        for r in rows:
+            kws = []
+            try:
+                kws = json.loads(r.keywords) if r.keywords else []
+            except Exception:
+                kws = []
+            out.append({
+                "id": r.id,
+                "question_id": r.question_id,
+                "score": r.score,
+                "emotion_score": r.emotion_score,
+                "posture_score": r.posture_score,
+                "eye_score": r.eye_score,
+                "answer_text": r.answer_text,
+                "keywords": kws,
+                "created_at": r.created_at.isoformat(),
+            })
+        return out
     finally:
         db.close()

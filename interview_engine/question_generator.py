@@ -6,6 +6,17 @@ import logging
 log = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
 
+try:
+    from nlp_models.llm_generator import generate_question as llm_generate
+except Exception:
+    llm_generate = None
+
+try:
+    from interview_engine.keyword_detector import detect_keywords, strength_from_answer
+except Exception:
+    detect_keywords = None
+    strength_from_answer = None
+
 
 DEFAULT_QUESTIONS: List[str] = [
     "Tell me about yourself.",
@@ -41,8 +52,43 @@ ROLE_QUESTIONS = {
 }
 
 
-def generate_question(role: str, history: List[str]) -> str:
-    # simple deterministic generator - choose next from DEFAULT_QUESTIONS based on history length
+def generate_question(role: str, history: List[str], last_answer: Optional[str] = None) -> str:
+    """Generate the next question. Prefer LLM-backed generator when available.
+
+    Parameters
+    - role: role name (e.g., 'ml')
+    - history: list of previous question texts
+    - last_answer: optional text of the candidate's last answer
+    """
+    # If we have an LLM generator available, attempt a focused generation.
+    try:
+        keywords = []
+        difficulty = None
+        if detect_keywords and last_answer:
+            try:
+                keywords = detect_keywords(role or "", last_answer)
+            except Exception:
+                keywords = []
+        if strength_from_answer and last_answer:
+            try:
+                s = strength_from_answer(last_answer, keywords)
+                if s == "weak":
+                    difficulty = "easy"
+                elif s == "strong":
+                    difficulty = "hard"
+                else:
+                    difficulty = "medium"
+            except Exception:
+                difficulty = None
+
+        if llm_generate:
+            q = llm_generate(role or "", history or [], last_answer, difficulty, keywords)
+            if q:
+                return q
+    except Exception:
+        log.exception("LLM generation failed; falling back to deterministic generator")
+
+    # Fallback to deterministic behavior
     pool = DEFAULT_QUESTIONS
     if role and role.lower() in ROLE_QUESTIONS:
         pool = ROLE_QUESTIONS[role.lower()]

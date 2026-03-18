@@ -35,6 +35,7 @@ class AnswerRequest(BaseModel):
     emotion_score: float
     posture_score: float
     eye_score: float
+    answer_text: Optional[str] = None
 
 
 @router.post("/session/start", response_model=StartResponse)
@@ -60,7 +61,16 @@ def next_question(req: NextRequest):
         if len(history) >= 5:
             return {"done": True}
         idx = len(history) + 1
-        qtext = generate_question("", history)
+        # Try to get role and last answer text to drive adaptive generation
+        sess = session_crud.get_session(req.session_id) or {}
+        role = sess.get("role") if isinstance(sess, dict) else None
+        answers = session_crud.get_answers(req.session_id)
+        last_answer_text = None
+        if answers:
+            last = answers[-1]
+            last_answer_text = last.get("answer_text")
+
+        qtext = generate_question(role or "", history, last_answer_text)
         q = session_crud.create_question(req.session_id, idx, qtext)
         return {"done": False, "question": qtext, "question_index": idx, "question_id": q.id}
     except Exception as exc:
@@ -71,7 +81,9 @@ def next_question(req: NextRequest):
 @router.post("/session/answer")
 def submit_answer(req: AnswerRequest):
     try:
-        session_crud.save_answer(req.session_id, req.question_id, req.score, req.emotion_score, req.posture_score, req.eye_score)
+        # persist answer (optionally with text and keywords if provided)
+        # keyword detection may run on the generator side; store what we got from client here
+        session_crud.save_answer(req.session_id, req.question_id, req.score, req.emotion_score, req.posture_score, req.eye_score, answer_text=req.answer_text, keywords=None)
         return {"status": "ok"}
     except Exception as exc:
         log.exception("Failed to save answer: %s", exc)

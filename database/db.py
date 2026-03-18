@@ -37,6 +37,28 @@ def init_db() -> None:
 
     log.info("Initializing database and creating tables (if not exist)")
     Base.metadata.create_all(bind=engine)
+    # Lightweight additive migration: if advanced answers table exists but lacks
+    # newly added columns, add them so the application can upgrade in-place.
+    try:
+        with engine.connect() as conn:
+            # Check adv_interview_answers columns using driver-level SQL
+            res = conn.exec_driver_sql("PRAGMA table_info('adv_interview_answers')")
+            rows = res.fetchall()
+            cols = [r[1] for r in rows] if rows else []
+            if 'adv_interview_answers' in [t.name for t in Base.metadata.sorted_tables] and cols:
+                needs = []
+                if 'answer_text' not in cols:
+                    needs.append("ALTER TABLE adv_interview_answers ADD COLUMN answer_text TEXT")
+                if 'keywords' not in cols:
+                    needs.append("ALTER TABLE adv_interview_answers ADD COLUMN keywords TEXT")
+                for stmt in needs:
+                    try:
+                        conn.exec_driver_sql(stmt)
+                        log.info("Applied DB migration: %s", stmt)
+                    except Exception:
+                        log.exception("Failed to apply migration statement: %s", stmt)
+    except Exception:
+        log.exception("Database migration check failed")
 
 
 if __name__ == "__main__":
