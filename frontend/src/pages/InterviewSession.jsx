@@ -2,6 +2,7 @@ import React, { useState, useCallback, useEffect } from 'react'
 import CameraBox from '../components/CameraBox'
 import RecordControls from '../components/RecordControls'
 import { useNavigate } from 'react-router-dom'
+import { motion } from 'framer-motion'
 
 export default function InterviewSession() {
   const [sessionId, setSessionId] = useState(null)
@@ -13,6 +14,7 @@ export default function InterviewSession() {
   const [status, setStatus] = useState('idle')
   const [answers, setAnswers] = useState([])
   const [busy, setBusy] = useState(false)
+  const [timer, setTimer] = useState(60)
   const navigate = useNavigate()
 
   useEffect(() => {
@@ -83,6 +85,18 @@ export default function InterviewSession() {
   const onStreamAvailable = useCallback((s) => {
     setStream(s)
   }, [])
+
+  // Simple countdown timer: starts when busy is true.
+  useEffect(() => {
+    let t = null
+    if (busy) {
+      setTimer(60)
+      t = setInterval(() => setTimer((v) => Math.max(0, v - 1)), 1000)
+    } else {
+      setTimer(60)
+    }
+    return () => t && clearInterval(t)
+  }, [busy])
 
   // onAnalysisComplete receives the JSON returned by /analyze (or error)
   const onAnalysisComplete = async (data) => {
@@ -243,55 +257,106 @@ export default function InterviewSession() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-semibold">Interview Session</h2>
-        <div>
-          {!sessionId ? (
-            <button onClick={startSession} className="px-4 py-2 bg-indigo-600 rounded hover:bg-indigo-500">Start Session</button>
-          ) : (
-            <span className="text-sm text-gray-400">Session: {sessionId}</span>
-          )}
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="col-span-2">
-          <div className="mb-4">
-            <div className="text-lg font-medium">Question {questionIndex ?? '-'}</div>
-            <div className="mt-2 text-gray-200 text-xl">{question ?? 'Press "Start Session" to begin.'}</div>
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-700 p-8 text-white">
+      <div className="max-w-6xl mx-auto">
+        <header className="flex items-center justify-between mb-6">
+          <h2 className="text-3xl font-bold">Interview Session</h2>
+          <div>
+            {!sessionId ? (
+              <button onClick={startSession} className="px-4 py-2 bg-indigo-600 rounded-2xl shadow-lg hover:bg-indigo-500">Start Session</button>
+            ) : (
+              <span className="text-sm text-gray-300">Session: {sessionId}</span>
+            )}
           </div>
+        </header>
 
-          <div className="bg-gray-800 rounded-lg p-4">
-            <CameraBox onStreamAvailable={onStreamAvailable} />
-            <div className="mt-4 flex items-center justify-center">
-              <RecordControls
-                stream={stream}
-                onAnalysisComplete={onAnalysisComplete}
-                setLoading={setLoading}
-                setStatus={setStatus}
-              />
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <motion.section className="col-span-2 bg-gray-800 rounded-2xl p-6 shadow-lg">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <div className="text-sm text-gray-400">Question {questionIndex ?? '-'}</div>
+                <motion.div key={question} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} className="mt-2 text-xl font-semibold text-white">
+                  {question ?? 'Press "Start Session" to begin.'}
+                </motion.div>
+              </div>
+              <div className="text-right">
+                <div className="text-sm text-gray-400">Timer</div>
+                <div className="text-xl font-semibold">{timer}s</div>
+              </div>
             </div>
-            <div className="mt-3 text-sm text-gray-400">Status: {status}</div>
-          </div>
-        </div>
 
-        <aside className="bg-gray-800 p-4 rounded-lg">
-          <h3 className="text-lg font-medium mb-2">Answers</h3>
-          {answers.length === 0 ? (
-            <div className="text-sm text-gray-400">No answers yet</div>
-          ) : (
-            <ul className="space-y-2 text-sm">
-              {answers.map((a, idx) => (
-                <li key={idx} className="p-2 bg-gray-900 rounded">
-                  Q{a.questionIndex} — score: {a.score.toFixed(2)} (emotion {a.emotion_score.toFixed(2)}, posture {a.posture_score.toFixed(2)}, eye {a.eye_score.toFixed(2)})
-                </li>
-              ))}
-            </ul>
-          )}
-        </aside>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="bg-gray-900 rounded-2xl p-4">
+                <CameraBox onStreamAvailable={onStreamAvailable} />
+              </div>
+
+              <div className="flex flex-col space-y-4">
+                <div className="p-4 bg-gray-900 rounded-2xl">
+                  <div className="text-sm text-gray-400 mb-2">Record</div>
+                  <RecordControls
+                    stream={stream}
+                    onAnalysisComplete={onAnalysisComplete}
+                    setLoading={setLoading}
+                    setStatus={setStatus}
+                  />
+                </div>
+
+                <div className="p-4 bg-gray-900 rounded-2xl">
+                  <div className="text-sm text-gray-400">Status</div>
+                  <div className="font-medium mt-1">{status}</div>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-4">
+              <h3 className="text-lg font-semibold">Answers</h3>
+              <div className="mt-2 space-y-2">
+                {answers.length === 0 ? (
+                  <div className="text-sm text-gray-400">No answers yet</div>
+                ) : (
+                  <ul className="space-y-2 text-sm">
+                    {answers.map((a, idx) => (
+                      <li key={idx} className="p-2 bg-gray-900 rounded">Q{a.questionIndex} — score: {a.score.toFixed(2)} (emotion {a.emotion_score.toFixed(2)}, posture {a.posture_score.toFixed(2)}, eye {a.eye_score.toFixed(2)})</li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            </div>
+          </motion.section>
+
+          <aside className="bg-gray-800 p-6 rounded-2xl shadow-lg">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h4 className="text-lg font-semibold">Live Score</h4>
+                <div className="text-sm text-gray-400">Real-time feedback on your last answer</div>
+              </div>
+            </div>
+
+            <div className="mt-2 space-y-3">
+              <div className="p-3 bg-gray-900 rounded">
+                <div className="text-sm text-gray-400">Final Score</div>
+                <div className="text-2xl font-bold">{answers.length ? (answers[answers.length - 1].score ?? 0).toFixed(2) : '-'}</div>
+              </div>
+
+              <div className="p-3 bg-gray-900 rounded">
+                <div className="text-sm text-gray-400">Emotion</div>
+                <div className="font-medium">{answers.length ? ((answers[answers.length - 1].emotion_score ?? 0) * 100).toFixed(0) + '%' : '-'}</div>
+              </div>
+
+              <div className="p-3 bg-gray-900 rounded">
+                <div className="text-sm text-gray-400">Posture</div>
+                <div className="font-medium">{answers.length ? ((answers[answers.length - 1].posture_score ?? 0) * 100).toFixed(0) + '%' : '-'}</div>
+              </div>
+
+              <div className="p-3 bg-gray-900 rounded">
+                <div className="text-sm text-gray-400">Eye Contact</div>
+                <div className="font-medium">{answers.length ? ((answers[answers.length - 1].eye_score ?? 0) * 100).toFixed(0) + '%' : '-'}</div>
+              </div>
+            </div>
+          </aside>
+        </div>
       </div>
-    </div>
+    </motion.div>
   )
 }
 import React, { useState, useEffect } from 'react'
