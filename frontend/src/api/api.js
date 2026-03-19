@@ -1,6 +1,7 @@
 import axios from 'axios'
 
-const BASE = process.env.REACT_APP_API_URL || 'http://127.0.0.1:8000'
+// Use a fixed base URL for local development and tests per project requirements
+const BASE = 'http://127.0.0.1:8000'
 
 const client = axios.create({
   baseURL: BASE,

@@ -8,10 +8,12 @@ const ROLES = ['ML', 'Frontend', 'Backend', 'HR', 'DSA']
 export default function RoleSelect() {
   const [role, setRole] = useState('')
   const [busy, setBusy] = useState(false)
+  const [error, setError] = useState('')
   const navigate = useNavigate()
 
   const onStart = async () => {
-    if (!role) return alert('Please select a role')
+    setError('')
+    if (!role) return setError('Please select a role before starting')
     try {
       setBusy(true)
       const data = await startSession(role.toLowerCase())
@@ -22,7 +24,7 @@ export default function RoleSelect() {
       navigate('/session')
     } catch (err) {
       console.error('start session failed', err)
-      alert('Failed to start session')
+      setError('Failed to start session — please try again')
     } finally {
       setBusy(false)
     }
@@ -50,25 +52,33 @@ export default function RoleSelect() {
           <h2 className="text-3xl font-semibold mb-2">Select your role</h2>
           <p className="text-gray-400 mb-6">Pick a role to get questions tailored to that domain. Click a card to select.</p>
 
+          {error && <div className="mb-4 p-3 rounded-md bg-red-700 text-red-100">{error}</div>}
+
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
-            {ROLES.map((r) => (
-              <motion.button
-                key={r}
-                onClick={() => setRole(r)}
-                whileHover={{ scale: 1.03 }}
-                whileTap={{ scale: 0.98 }}
-                className={`relative p-6 rounded-2xl shadow-lg bg-gray-900 text-white transition transform hover:scale-105`}>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <div className="text-lg font-semibold">{r}</div>
-                    <div className="text-sm text-gray-400 mt-1">Practice {r} interview questions</div>
+            {ROLES.map((r) => {
+              const selected = role === r
+              return (
+                <motion.button
+                  key={r}
+                  onClick={() => !busy && setRole(r)}
+                  whileHover={{ scale: busy ? 1 : 1.03 }}
+                  whileTap={{ scale: busy ? 1 : 0.98 }}
+                  aria-pressed={selected}
+                  aria-label={`Select ${r} role`}
+                  disabled={busy}
+                  className={`relative p-6 rounded-2xl shadow-lg text-left transition transform focus:outline-none ${selected ? 'bg-indigo-600' : 'bg-gray-900 hover:scale-105'} ${busy ? 'opacity-70 cursor-not-allowed' : ''}`}>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="text-lg font-semibold">{r}</div>
+                      <div className="text-sm text-gray-200 mt-1">Practice {r} interview questions</div>
+                    </div>
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center ${selected ? 'bg-white text-indigo-600' : 'bg-gray-700 text-gray-300'}`}>
+                      {selected ? '✓' : r[0]}
+                    </div>
                   </div>
-                  <div className={`w-10 h-10 rounded-full flex items-center justify-center ${role === r ? 'bg-indigo-500 text-white' : 'bg-gray-700 text-gray-300'}`}>
-                    {role === r ? '✓' : r[0]}
-                  </div>
-                </div>
-              </motion.button>
-            ))}
+                </motion.button>
+              )
+            })}
           </div>
 
           <div className="flex items-center justify-end">
