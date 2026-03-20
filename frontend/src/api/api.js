@@ -8,6 +8,20 @@ const client = axios.create({
   timeout: 120000,
 })
 
+// Attach JWT token from localStorage if present
+client.interceptors.request.use((config) => {
+  try {
+    const token = localStorage.getItem('aiit_token')
+    if (token) {
+      config.headers = config.headers || {}
+      config.headers.Authorization = `Bearer ${token}`
+    }
+  } catch (e) {
+    // ignore
+  }
+  return config
+})
+
 export async function startSession(role) {
   const resp = await client.post('/session/start', { role })
   return resp.data

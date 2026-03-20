@@ -11,6 +11,10 @@ import History from './pages/History'
 import Stats from './pages/Stats'
 import Settings from './pages/Settings'
 import InterviewSession from './pages/InterviewSession'
+import Login from './pages/Login'
+import Register from './pages/Register'
+import ProtectedRoute from './components/ProtectedRoute'
+import { AuthProvider } from './context/AuthContext'
 
 export default function App() {
   const [analysisResult, setAnalysisResult] = useState(null)
@@ -19,7 +23,8 @@ export default function App() {
   const [status, setStatus] = useState('idle')
 
   return (
-    <div className="min-h-screen bg-gray-900 text-gray-100 font-sans">
+    <AuthProvider>
+      <div className="min-h-screen bg-gray-900 text-gray-100 font-sans">
       <nav className="p-4 border-b border-gray-800">
         <div className="container mx-auto flex items-center justify-between">
           <Link to="/" className="text-lg font-semibold">AI Interview Trainer</Link>
@@ -44,13 +49,16 @@ export default function App() {
           <Route path="/loading" element={<Loading status={status} />} />
           <Route path="/result" element={<Result result={analysisResult} />} />
           <Route path="/results" element={<Results />} />
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/session" element={<InterviewSession />} />
-          <Route path="/history" element={<History />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
+          <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+          <Route path="/session" element={<ProtectedRoute><InterviewSession /></ProtectedRoute>} />
+          <Route path="/history" element={<ProtectedRoute><History /></ProtectedRoute>} />
           <Route path="/stats" element={<Stats />} />
           <Route path="/settings" element={<Settings />} />
         </Routes>
       </main>
-    </div>
+      </div>
+    </AuthProvider>
   )
 }

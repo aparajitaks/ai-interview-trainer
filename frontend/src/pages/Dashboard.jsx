@@ -1,16 +1,26 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useContext } from 'react'
 import { useNavigate } from 'react-router-dom'
+import client from '../api/api'
+import { AuthContext } from '../context/AuthContext'
 
 export default function Dashboard() {
   const navigate = useNavigate()
+  const { user, logout } = useContext(AuthContext)
   const [stats, setStats] = useState(null)
+  const [history, setHistory] = useState([])
 
   useEffect(() => {
     let mounted = true
-    fetch('http://127.0.0.1:8000/stats')
-      .then((r) => r.json())
-      .then((data) => mounted && setStats(data))
+    client
+      .get('/stats')
+      .then((r) => mounted && setStats(r.data))
       .catch((err) => console.error('Failed to load stats', err))
+
+    client
+      .get('/session/history')
+      .then((r) => mounted && setHistory(r.data || []))
+      .catch((err) => console.error('Failed to load session history', err))
+
     return () => {
       mounted = false
     }
@@ -28,9 +38,15 @@ export default function Dashboard() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 to-black p-8">
       <div className="max-w-6xl w-full">
-        <div className="text-center mb-10">
-          <h1 className="text-4xl font-extrabold text-white">AI Interview Trainer Dashboard</h1>
-          <p className="mt-2 text-slate-300">A quick overview of your interview activities and performance.</p>
+        <div className="text-center mb-10 flex items-center justify-between">
+          <div>
+            <h1 className="text-4xl font-extrabold text-white">AI Interview Trainer Dashboard</h1>
+            <p className="mt-2 text-slate-300">A quick overview of your interview activities and performance.</p>
+          </div>
+          <div className="text-right">
+            <div className="text-sm text-slate-300">{user ? user.email : ''}</div>
+            <button onClick={() => logout()} className="mt-2 px-3 py-1 rounded bg-white/6">Sign out</button>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-6">
@@ -77,6 +93,24 @@ export default function Dashboard() {
           <div className="rounded-xl p-4 bg-white/6 backdrop-blur-md border border-white/10 shadow-lg text-center">
             <div className="text-sm text-slate-300">Best Score</div>
             <div className="text-2xl font-bold text-white">{stats ? Math.round((stats.best_score ?? 0) * 100) : '—'}</div>
+          </div>
+        </div>
+
+        <div className="mt-8">
+          <h3 className="text-xl text-white mb-3">Your recent sessions</h3>
+          <div className="space-y-3">
+            {history.length === 0 && <div className="text-slate-400">No sessions yet.</div>}
+            {history.map((s) => (
+              <div key={s.session_id} className="p-3 rounded bg-white/6 flex justify-between">
+                <div>
+                  <div className="text-white">{s.role || '—'}</div>
+                  <div className="text-sm text-slate-300">{new Date(s.created_at).toLocaleString()}</div>
+                </div>
+                <div className="text-right">
+                  <div className="text-white font-semibold">{Math.round((s.average_score ?? 0) * 100)}</div>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       </div>
