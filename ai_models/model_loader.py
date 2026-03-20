@@ -9,6 +9,7 @@ lock, per-key loader functions, and logging for observability.
 """
 from __future__ import annotations
 
+import os
 import threading
 from typing import Any, Dict, Optional
 
@@ -21,6 +22,11 @@ _MODEL_CACHE: Dict[str, Any] = {}
 _CACHE_LOCK = threading.RLock()
 
 
+def _skip_heavy_loads() -> bool:
+    """Return True when running in CI or other lightweight environments."""
+    return os.getenv("CI", "").lower() == "true"
+
+
 def _load_emotion_model() -> Any:
     """Load the emotion model using the cv_models.emotion_model loader.
 
@@ -29,6 +35,9 @@ def _load_emotion_model() -> Any:
     """
     model_name = get_model_name("emotion")
     try:
+        if _skip_heavy_loads():
+            log.info("CI detected; skipping emotion model load")
+            return None
         from cv_models.emotion_model import load_emotion_model
 
         print("loading model")
@@ -49,6 +58,9 @@ def _load_pose_model() -> Any:
     """
     model_name = get_model_name("pose")
     try:
+        if _skip_heavy_loads():
+            log.info("CI detected; skipping pose model load")
+            return None
         from cv_models.pose_detector import load_pose_detector
 
         print("loading model")
@@ -69,6 +81,9 @@ def _load_gaze_model() -> Any:
     """
     model_name = get_model_name("gaze")
     try:
+        if _skip_heavy_loads():
+            log.info("CI detected; skipping gaze model load")
+            return None
         from cv_models import gaze as gaze_mod  # type: ignore
 
         if hasattr(gaze_mod, "load_gaze_model"):

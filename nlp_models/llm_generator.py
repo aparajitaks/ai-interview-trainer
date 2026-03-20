@@ -27,6 +27,10 @@ def _get_pipeline():
     global _GEN_PIPE
     if _GEN_PIPE is not None:
         return _GEN_PIPE
+    if os.getenv("CI", "").lower() == "true":
+        log.info("CI detected; skipping transformers pipeline load")
+        _GEN_PIPE = None
+        return _GEN_PIPE
     try:
         from transformers import pipeline
 
