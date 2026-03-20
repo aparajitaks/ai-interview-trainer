@@ -15,13 +15,15 @@ export default function RoleSelect() {
     setError('')
     if (!role) return setError('Please select a role before starting')
     try {
-      setBusy(true)
-      const data = await startSession(role.toLowerCase())
-      // save session id in sessionStorage for interview page
-      sessionStorage.setItem('aiit_session_id', data.session_id)
-      sessionStorage.setItem('aiit_question', data.question || '')
-      sessionStorage.setItem('aiit_question_id', data.question_id || '')
-      navigate('/session')
+  setBusy(true)
+  const data = await startSession(role.toLowerCase())
+  // save session id in sessionStorage for interview page (backwards compatibility)
+  sessionStorage.setItem('aiit_session_id', data.session_id)
+  sessionStorage.setItem('aiit_question', data.question || '')
+  sessionStorage.setItem('aiit_question_id', data.question_id || '')
+  // Navigate to session route and include session id as query param so the
+  // InterviewSession page can pick it up directly from the URL.
+  navigate(`/session?session_id=${encodeURIComponent(data.session_id)}`)
     } catch (err) {
       console.error('start session failed', err)
       setError('Failed to start session — please try again')

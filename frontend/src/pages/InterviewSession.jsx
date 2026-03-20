@@ -20,12 +20,25 @@ export default function InterviewSession() {
   const navigate = useNavigate()
 
   useEffect(() => {
-    const sid = sessionStorage.getItem('aiit_session_id')
-    const q = sessionStorage.getItem('aiit_question')
-    const qid = sessionStorage.getItem('aiit_question_id')
-    if (sid) setSessionId(sid)
-    if (q) setQuestion(q)
-    if (qid) setQuestionId(qid)
+    // Prefer session_id passed as a query parameter (RoleSelect now navigates
+    // to /session?session_id=...). Fall back to sessionStorage for backwards
+    // compatibility (older flows or direct navigation).
+    try {
+      const params = new URLSearchParams(window.location.search)
+      const sid = params.get('session_id') || sessionStorage.getItem('aiit_session_id')
+      const q = params.get('question') || sessionStorage.getItem('aiit_question')
+      const qid = params.get('question_id') || sessionStorage.getItem('aiit_question_id')
+      if (sid) setSessionId(sid)
+      if (q) setQuestion(q)
+      if (qid) setQuestionId(qid)
+    } catch (e) {
+      const sid = sessionStorage.getItem('aiit_session_id')
+      const q = sessionStorage.getItem('aiit_question')
+      const qid = sessionStorage.getItem('aiit_question_id')
+      if (sid) setSessionId(sid)
+      if (q) setQuestion(q)
+      if (qid) setQuestionId(qid)
+    }
   }, [])
 
   const startSession = async () => {
