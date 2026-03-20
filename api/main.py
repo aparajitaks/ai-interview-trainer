@@ -49,6 +49,13 @@ def create_app() -> FastAPI:
         app.include_router(stats_router.router, prefix="/stats", tags=["stats"])
     except Exception:
         log.info("Stats router not available at startup")
+    # auth router (register/login/me)
+    try:
+        from api.routes import auth as auth_router
+
+        app.include_router(auth_router.router, prefix="/auth", tags=["auth"])
+    except Exception:
+        log.info("Auth router not available at startup")
     # session router for advanced interview flows
     try:
         from api.routes import session as session_router
@@ -60,6 +67,10 @@ def create_app() -> FastAPI:
 
     @app.on_event("startup")
     def _log_startup():
+        from time import perf_counter
+
+        print("startup begin")
+        start_ts = perf_counter()
         print("Starting AI Interview Trainer API")
         log.info("Starting AI Interview Trainer API")
         log.info("LOG_LEVEL=%s", LOG_LEVEL)
@@ -105,14 +116,22 @@ def create_app() -> FastAPI:
         except Exception:
             log.exception("Error during model preload/status setup")
 
-        # Ensure DB tables exist
+        # Ensure DB tables exist and measure time
         try:
             from database.db import init_db
 
+            t0 = perf_counter()
             init_db()
-            log.info("Database initialized on startup")
+            db_elapsed = perf_counter() - t0
+            log.info("Database initialized on startup (%.3fs)", db_elapsed)
+            print("db init done (%.3fs)" % db_elapsed)
         except Exception:
             log.exception("Failed to initialize database on startup")
+
+        # Mark router ready and total startup time
+        total_elapsed = perf_counter() - start_ts
+        log.info("Router ready; startup complete (%.3fs)", total_elapsed)
+        print("router ready; startup complete (%.3fs)" % total_elapsed)
 
     return app
 

@@ -14,6 +14,12 @@ if [ -f ".venv/bin/activate" ]; then
   source .venv/bin/activate
 fi
 
+# Prefer .venv python if available
+PYTHON="python3"
+if [ -x ".venv/bin/python" ]; then
+  PYTHON=".venv/bin/python"
+fi
+
 # Ensure Python can import local packages
 export PYTHONPATH="$ROOT_DIR:${PYTHONPATH-}"
 
@@ -29,5 +35,10 @@ if command -v lsof >/dev/null 2>&1; then
   fi
 fi
 
-nohup bash -lc "python3 -m uvicorn api.main:app --host 127.0.0.1 --port ${PORT}" > "$ROOT_DIR/uvicorn.log" 2>&1 &
+RELOAD_FLAG=""
+if [ "${AIIT_RELOAD-}" = "1" ] || [ "${AIIT_RELOAD-}" = "true" ]; then
+  RELOAD_FLAG="--reload"
+fi
+
+nohup bash -lc "${PYTHON} -m uvicorn api.main:app --host 127.0.0.1 --port ${PORT} ${RELOAD_FLAG}" > "$ROOT_DIR/uvicorn.log" 2>&1 &
 echo $!

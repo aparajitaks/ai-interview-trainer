@@ -140,11 +140,17 @@ def get_answers(session_id: str) -> List[Dict[str, Any]]:
         db.close()
 
 
-def list_sessions(limit: int = 100) -> List[Dict[str, Any]]:
-    """Return recent advanced interview sessions with simple aggregates."""
+def list_sessions(limit: int = 100, user_id: Optional[str] = None) -> List[Dict[str, Any]]:
+    """Return recent advanced interview sessions with simple aggregates.
+
+    If user_id is provided, only sessions belonging to that user are returned.
+    """
     db: Session = SessionLocal()
     try:
-        rows = db.query(advanced_models.AdvancedInterviewSession).order_by(advanced_models.AdvancedInterviewSession.created_at.desc()).limit(limit).all()
+        q = db.query(advanced_models.AdvancedInterviewSession)
+        if user_id is not None:
+            q = q.filter_by(user_id=str(user_id))
+        rows = q.order_by(advanced_models.AdvancedInterviewSession.created_at.desc()).limit(limit).all()
         out = []
         for r in rows:
             # compute average score for this session from answers

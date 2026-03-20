@@ -20,7 +20,7 @@ class LoginRequest(BaseModel):
     password: str
 
 
-@router.post("/auth/register")
+@router.post("/register")
 def register(req: RegisterRequest):
     try:
         u = user_crud.create_user(req.username, req.email, req.password)
@@ -32,7 +32,7 @@ def register(req: RegisterRequest):
         raise HTTPException(status_code=500, detail="Failed to create user")
 
 
-@router.post("/auth/login")
+@router.post("/login")
 def login(req: LoginRequest):
     u = user_crud.verify_user(req.email, req.password)
     if not u:
@@ -41,7 +41,7 @@ def login(req: LoginRequest):
     return {"access_token": token, "token_type": "bearer"}
 
 
-@router.get("/auth/me")
+@router.get("/me")
 def me(current_user: dict = Depends(get_current_user)):
     # return non-sensitive user info
     return {"id": current_user.get("id"), "username": current_user.get("username"), "email": current_user.get("email")}

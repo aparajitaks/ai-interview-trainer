@@ -95,6 +95,10 @@ def _get_or_load(name: str, loader) -> Optional[Any]:
 
         model = loader()
         _MODEL_CACHE[name] = model
+        if model is not None:
+            log.info("Model '%s' loaded and cached", name)
+        else:
+            log.warning("Model '%s' loader returned None (failed to load)", name)
         return model
 
 

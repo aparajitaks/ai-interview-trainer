@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { finishSession } from '../api/api'
+import client from '../api/api'
 import { motion } from 'framer-motion'
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Legend } from 'recharts'
 
@@ -15,17 +16,15 @@ export default function Results() {
       setLoading(false)
       return
     }
-    ;(async () => {
+    ; (async () => {
       try {
         // Prefer the new session detail endpoint which provides per-question breakdown
-        const detailResp = await fetch(`http://127.0.0.1:8000/session/${sid}`)
-        if (detailResp.ok) {
-          const detail = await detailResp.json().catch(() => null)
-          if (detail) {
-            setSummary(detail.summary || detail)
-            setAnswers(detail.answers || detail.answers_list || detail.answers || [])
-            return
-          }
+        const detailResp = await client.get(`/session/${sid}`)
+        if (detailResp.data) {
+          const detail = detailResp.data
+          setSummary(detail.summary || detail)
+          setAnswers(detail.answers || detail.answers_list || detail.answers || [])
+          return
         }
 
         // Fallback to calling finishSession if the GET detail is not available

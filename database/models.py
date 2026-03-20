@@ -14,13 +14,6 @@ log = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
 
 
-class User(Base):
-    __tablename__ = "users"
-    id = Column(Integer, primary_key=True, index=True)
-    username = Column(String(128), unique=True, nullable=True)
-    created_at = Column(DateTime, default=datetime.datetime.utcnow)
-
-
 class InterviewSession(Base):
     __tablename__ = "interview_sessions"
     id = Column(Integer, primary_key=True, index=True)

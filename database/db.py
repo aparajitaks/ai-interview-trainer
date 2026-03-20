@@ -42,32 +42,79 @@ def init_db() -> None:
 
     log.info("Initializing database and creating tables (if not exist)")
     Base.metadata.create_all(bind=engine)
-    # Lightweight additive migration: if advanced answers table exists but lacks
-    # newly added columns, add them so the application can upgrade in-place.
+
+    # Use a simple schema versioning strategy to avoid running ALTERs on every
+    # process start. We only run the lightweight additive migrations when the
+    # DB user_version is less than our expected schema version. This makes
+    # startup cheap on subsequent runs and prevents duplicate-column errors.
+    SCHEMA_VERSION = 1
     try:
-        with engine.connect() as conn:
-            # Check adv_interview_answers columns using driver-level SQL
-            res = conn.exec_driver_sql("PRAGMA table_info('adv_interview_answers')")
-            rows = res.fetchall()
-            cols = [r[1] for r in rows] if rows else []
-            if 'adv_interview_answers' in [t.name for t in Base.metadata.sorted_tables] and cols:
-                needs = []
-                if 'answer_text' not in cols:
-                    needs.append("ALTER TABLE adv_interview_answers ADD COLUMN answer_text TEXT")
-                if 'keywords' not in cols:
-                    needs.append("ALTER TABLE adv_interview_answers ADD COLUMN keywords TEXT")
-                if 'feedback' not in cols:
-                    needs.append("ALTER TABLE adv_interview_answers ADD COLUMN feedback TEXT")
-                if 'user_id' not in cols:
-                    needs.append("ALTER TABLE adv_interview_sessions ADD COLUMN user_id TEXT")
-                for stmt in needs:
+        with engine.begin() as conn:
+            cur = conn.exec_driver_sql("PRAGMA user_version")
+            row = cur.fetchone()
+            user_version = int(row[0]) if row and row[0] is not None else 0
+            log.debug("Current DB user_version=%s, target=%s", user_version, SCHEMA_VERSION)
+
+            if user_version < SCHEMA_VERSION:
+                # Lightweight additive migration: inspect tables and only add
+                # missing columns. These checks are only performed once per
+                # schema version upgrade.
+                try:
+                    # Check adv_interview_answers columns using driver-level SQL
+                    res = conn.exec_driver_sql("PRAGMA table_info('adv_interview_answers')")
+                    rows = res.fetchall()
+                    cols = [r[1] for r in rows] if rows else []
+                    if 'adv_interview_answers' in [t.name for t in Base.metadata.sorted_tables] and cols:
+                        needs = []
+                        if 'answer_text' not in cols:
+                            needs.append("ALTER TABLE adv_interview_answers ADD COLUMN answer_text TEXT")
+                        if 'keywords' not in cols:
+                            needs.append("ALTER TABLE adv_interview_answers ADD COLUMN keywords TEXT")
+                        if 'feedback' not in cols:
+                            needs.append("ALTER TABLE adv_interview_answers ADD COLUMN feedback TEXT")
+                        # Query adv_interview_sessions columns and add user_id
+                        res2 = conn.exec_driver_sql("PRAGMA table_info('adv_interview_sessions')")
+                        rows2 = res2.fetchall()
+                        sess_cols = [r[1] for r in rows2] if rows2 else []
+                        if 'user_id' not in sess_cols:
+                            needs.append("ALTER TABLE adv_interview_sessions ADD COLUMN user_id TEXT")
+                        for stmt in needs:
+                            try:
+                                conn.exec_driver_sql(stmt)
+                                log.info("Applied DB migration: %s", stmt)
+                            except Exception:
+                                log.exception("Failed to apply migration statement: %s", stmt)
+
+                    # Migrate users table: add columns added in user_model.py that may
+                    # not exist if the DB was created from the old stub User model.
+                    res_u = conn.exec_driver_sql("PRAGMA table_info('users')")
+                    rows_u = res_u.fetchall()
+                    user_cols = [r[1] for r in rows_u] if rows_u else []
+                    user_migrations = []
+                    if 'email' not in user_cols:
+                        user_migrations.append("ALTER TABLE users ADD COLUMN email TEXT")
+                    if 'password_hash' not in user_cols:
+                        user_migrations.append("ALTER TABLE users ADD COLUMN password_hash TEXT")
+                    for stmt in user_migrations:
+                        try:
+                            conn.exec_driver_sql(stmt)
+                            log.info("Applied users migration: %s", stmt)
+                        except Exception:
+                            log.exception("Failed to apply users migration: %s", stmt)
+
+                    # Bump user_version to mark migrations applied for this schema
                     try:
-                        conn.exec_driver_sql(stmt)
-                        log.info("Applied DB migration: %s", stmt)
+                        conn.exec_driver_sql(f"PRAGMA user_version = {SCHEMA_VERSION}")
+                        log.info("Set DB user_version=%s", SCHEMA_VERSION)
                     except Exception:
-                        log.exception("Failed to apply migration statement: %s", stmt)
+                        log.exception("Failed to set PRAGMA user_version=%s", SCHEMA_VERSION)
+                except Exception:
+                    log.exception("Database migration check/upgrade failed")
+            else:
+                log.debug("DB schema version is up-to-date; skipping migrations")
     except Exception:
-        log.exception("Database migration check failed")
+        log.exception("Database migration/version check failed")
+
 
 
 if __name__ == "__main__":

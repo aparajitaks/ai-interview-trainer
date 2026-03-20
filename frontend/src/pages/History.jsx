@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import client from '../api/api'
 
 export default function History() {
   const navigate = useNavigate()
@@ -8,37 +9,30 @@ export default function History() {
 
   useEffect(() => {
     let mounted = true
-    ;(async () => {
-      try {
-        console.log('history: loading')
-        // use the new session history endpoint which returns advanced session summaries
-        const resp = await fetch('http://127.0.0.1:8000/session/history')
-        if (!mounted) return
-        if (!resp.ok) {
-          const txt = await resp.text().catch(() => '')
-          console.error('Failed to load history - server error', resp.status, resp.statusText, txt)
+      ; (async () => {
+        try {
+          console.log('history: loading')
+          const resp = await client.get('/session/history')
+          if (!mounted) return
+          const data = resp.data || []
+          if (!mounted) return
+          // normalize a couple of possible shapes (old /results vs new /session/history)
+          const itemsList = (data || []).map((it) => ({
+            id: it.id || it.session_id || it.sessionId || it.session || null,
+            session_id: it.session_id || it.id || it.sessionId || null,
+            created_at: it.created_at || it.createdAt || it.timestamp || null,
+            average_score: it.average_score ?? it.avg_score ?? it.score ?? null,
+            role: it.role || 'candidate',
+            raw: it,
+          }))
+          setItems(itemsList)
+        } catch (err) {
+          console.error('Failed to load history', err)
           setItems([])
-          return
+        } finally {
+          if (mounted) setLoading(false)
         }
-        const data = await resp.json().catch(() => [])
-        if (!mounted) return
-        // normalize a couple of possible shapes (old /results vs new /session/history)
-        const itemsList = (data || []).map((it) => ({
-          id: it.id || it.session_id || it.sessionId || it.session || null,
-          session_id: it.session_id || it.id || it.sessionId || null,
-          created_at: it.created_at || it.createdAt || it.timestamp || null,
-          average_score: it.average_score ?? it.avg_score ?? it.score ?? null,
-          role: it.role || 'candidate',
-          raw: it,
-        }))
-        setItems(itemsList)
-      } catch (err) {
-        console.error('Failed to load history', err)
-        setItems([])
-      } finally {
-        if (mounted) setLoading(false)
-      }
-    })()
+      })()
     return () => {
       mounted = false
     }
@@ -56,7 +50,7 @@ export default function History() {
           <div className="text-center text-slate-300">Loading...</div>
         ) : (
           <div className="space-y-4">
-              {items.length === 0 ? (
+            {items.length === 0 ? (
               <div className="text-center text-slate-400">No interviews yet.</div>
             ) : (
               items.map((it) => (

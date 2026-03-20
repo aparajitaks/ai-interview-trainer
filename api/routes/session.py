@@ -216,11 +216,40 @@ def finish_session(req: NextRequest, current_user: dict = Depends(get_current_us
         raise HTTPException(status_code=500, detail="Failed to finish session")
 
 
-@router.get("/session/history")
-def list_session_history():
+@router.get("/session/stats")
+def get_session_stats():
     try:
         try:
-            rows = session_crud.list_sessions()
+            sessions = session_crud.list_sessions(limit=1000)
+        except Exception:
+            log.exception("Failed to compute stats from DB")
+            raise HTTPException(status_code=500, detail="DB read failed")
+        total = len(sessions)
+        if total == 0:
+            return {"total_sessions": 0, "avg_score": 0.0, "best_score": 0.0, "worst_score": 0.0}
+        scores = [s["average_score"] for s in sessions if s.get("average_score") is not None]
+        avg_score = sum(scores) / len(scores) if scores else 0.0
+        best_score = max(scores) if scores else 0.0
+        worst_score = min(scores) if scores else 0.0
+        return {
+            "total_sessions": total,
+            "avg_score": round(avg_score, 4),
+            "best_score": round(best_score, 4),
+            "worst_score": round(worst_score, 4),
+        }
+    except HTTPException:
+        raise
+    except Exception as exc:
+        log.exception("Unhandled error in get_session_stats: %s", exc)
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+
+@router.get("/session/history")
+def list_session_history(current_user: dict = Depends(get_current_user)):
+    try:
+        try:
+            uid = current_user.get("id") if isinstance(current_user, dict) else None
+            rows = session_crud.list_sessions(user_id=str(uid) if uid is not None else None)
         except Exception:
             log.exception("Failed to read session history from DB")
             raise HTTPException(status_code=500, detail="DB read failed")
@@ -249,18 +278,3 @@ def get_session_detail(session_id: str):
         log.exception("Unhandled error in get_session_detail: %s", exc)
         raise HTTPException(status_code=500, detail="Internal server error")
 
-
-@router.get("/session/stats")
-def get_session_stats():
-    try:
-        try:
-            s = dbcrud.get_stats()
-        except Exception:
-            log.exception("Failed to compute stats from DB")
-            raise HTTPException(status_code=500, detail="DB read failed")
-        return s
-    except HTTPException:
-        raise
-    except Exception as exc:
-        log.exception("Unhandled error in get_session_stats: %s", exc)
-        raise HTTPException(status_code=500, detail="Internal server error")
