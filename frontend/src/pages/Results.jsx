@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { finishSession } from '../api/api'
 import { motion } from 'framer-motion'
+import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Legend } from 'recharts'
 
 export default function Results() {
   const [summary, setSummary] = useState(null)
@@ -16,6 +17,18 @@ export default function Results() {
     }
     ;(async () => {
       try {
+        // Prefer the new session detail endpoint which provides per-question breakdown
+        const detailResp = await fetch(`http://127.0.0.1:8000/session/${sid}`)
+        if (detailResp.ok) {
+          const detail = await detailResp.json().catch(() => null)
+          if (detail) {
+            setSummary(detail.summary || detail)
+            setAnswers(detail.answers || detail.answers_list || detail.answers || [])
+            return
+          }
+        }
+
+        // Fallback to calling finishSession if the GET detail is not available
         const res = await finishSession(sid)
         setSummary(res.summary || res)
         setAnswers(res.answers || [])
@@ -87,6 +100,35 @@ export default function Results() {
             <div className="text-sm text-gray-300">Next Steps</div>
             <div className="text-lg font-semibold mt-2">Practice more role-specific questions to improve scores</div>
           </motion.div>
+        </div>
+
+        {/* quick per-question scores chart */}
+        <div className="mb-6 p-6 rounded-2xl bg-gray-800 shadow-lg">
+          <div className="text-sm text-gray-300 mb-4">Per-question scores</div>
+          {answers.length === 0 ? (
+            <div className="text-gray-400">No per-question data available for chart.</div>
+          ) : (
+            <div style={{ width: '100%', height: 220 }}>
+              <ResponsiveContainer>
+                <BarChart data={answers.map((a, i) => ({
+                  name: `Q${i + 1}`,
+                  score: Number(a.score ?? 0) * 100,
+                  emotion: Number(a.emotion_score ?? 0) * 100,
+                  posture: Number(a.posture_score ?? 0) * 100,
+                  eye: Number(a.eye_score ?? 0) * 100,
+                }))}>
+                  <XAxis dataKey="name" stroke="#9ca3af" />
+                  <YAxis stroke="#9ca3af" />
+                  <Tooltip />
+                  <Legend />
+                  <Bar dataKey="score" fill="#10b981" />
+                  <Bar dataKey="emotion" fill="#60a5fa" />
+                  <Bar dataKey="posture" fill="#f59e0b" />
+                  <Bar dataKey="eye" fill="#ef4444" />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          )}
         </div>
 
         <div className="space-y-4">
