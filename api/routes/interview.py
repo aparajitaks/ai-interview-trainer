@@ -164,7 +164,30 @@ async def analyze_upload(file: UploadFile = File(...)):
             log.error("Failed to save InterviewResult for session=%s: %s", session_id, exc, exc_info=True)
         
 
-        return {"session_id": session_id, "result": result}
+        # Normalize result keys so frontend has a consistent view. The
+        # inference pipeline may return final_score/emotion_score/posture_score/eye_score
+        # or similar variants; ensure the response contains these canonical keys:
+        try:
+            final_score = float(result.get("final_score", result.get("score", 0.0))) if isinstance(result, dict) else 0.0
+            emotion = float(result.get("emotion_score", result.get("emotion", 0.0))) if isinstance(result, dict) else 0.0
+            posture = float(result.get("posture_score", result.get("posture", 0.0))) if isinstance(result, dict) else 0.0
+            eye = float(result.get("eye_score", result.get("eye_contact_score", result.get("eye", 0.0)))) if isinstance(result, dict) else 0.0
+        except Exception:
+            final_score = 0.0
+            emotion = 0.0
+            posture = 0.0
+            eye = 0.0
+
+        normalized = dict(result) if isinstance(result, dict) else {"final_score": final_score}
+        normalized.update({
+            "score": final_score,
+            "final_score": final_score,
+            "emotion_score": emotion,
+            "posture_score": posture,
+            "eye_score": eye,
+        })
+
+        return {"session_id": session_id, "result": normalized}
     except HTTPException:
         raise
     except Exception as exc:
