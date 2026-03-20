@@ -15,6 +15,13 @@ if [ ! -x "$PYTHON_BIN" ]; then
   fi
 fi
 
+if [ -f .env ]; then
+  # shellcheck disable=SC1091
+  source .env
+fi
+
+export TRANSFORMERS_OFFLINE=${TRANSFORMERS_OFFLINE:-1}
+
 "$PYTHON_BIN" -m uvicorn api.main:app \
-  --host 127.0.0.1 \
+  --host 0.0.0.0 \
   --port 8000

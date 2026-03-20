@@ -5,6 +5,12 @@ on: [push, pull_request]
 jobs:
   test:
     runs-on: ubuntu-latest
+    env:
+      CI: "true"
+      AIIT_PRELOAD_MODELS: "false"
+      TRANSFORMERS_OFFLINE: "1"
+      HF_HUB_OFFLINE: "1"
+      CUDA_VISIBLE_DEVICES: ""
 
     steps:
       - uses: actions/checkout@v4

@@ -9,4 +9,6 @@ pandas
 pytest
 httpx
 python-dotenv
+torch
+transformers
 

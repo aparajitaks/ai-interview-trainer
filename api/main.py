@@ -7,6 +7,8 @@ initializes shared components used by routes.
 from __future__ import annotations
 
 import logging
+import os
+from dotenv import load_dotenv
 from config.settings import LOG_LEVEL, DB_PATH, STORAGE_DIR, EMOTION_MODEL
 from utils.logger import get_logger
 
@@ -16,7 +18,15 @@ from fastapi.middleware.cors import CORSMiddleware
 from api.routes import interview as interview_router
 from api.routes import results as results_router
 from api.routes import health as health_router
-import os
+
+load_dotenv()
+
+HOST = os.getenv("HOST", "0.0.0.0")
+PORT = int(os.getenv("PORT", "8000"))
+MODEL_OFFLINE = os.getenv("MODEL_OFFLINE", "").lower() in ("1", "true", "yes")
+
+if MODEL_OFFLINE:
+    os.environ.setdefault("TRANSFORMERS_OFFLINE", "1")
 
 log = get_logger(__name__)
 
@@ -74,6 +84,9 @@ def create_app() -> FastAPI:
         log.info("DB_PATH=%s", DB_PATH)
         log.info("STORAGE_DIR=%s", STORAGE_DIR)
         log.info("EMOTION_MODEL=%s", EMOTION_MODEL)
+        log.info("HOST=%s PORT=%s", HOST, PORT)
+        if MODEL_OFFLINE:
+            log.info("MODEL_OFFLINE enabled; transformers offline")
 
         app.state.model_status = {"emotion": "lazy", "pose": "lazy", "gaze": "lazy"}
         log.info("Model preload disabled; models will load lazily on first use")
@@ -99,4 +112,4 @@ app = create_app()
 if __name__ == "__main__":
     import uvicorn
 
-    uvicorn.run("api.main:app", host="0.0.0.0", port=8000)
+    uvicorn.run("api.main:app", host=HOST, port=PORT)
