@@ -1,7 +1,9 @@
 import axios from 'axios'
 
-// Use a fixed base URL for local development and tests per project requirements
-const BASE = 'http://127.0.0.1:8000'
+const BASE =
+  typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_API_BASE_URL
+    ? import.meta.env.VITE_API_BASE_URL
+    : 'http://localhost:8000'
 
 const client = axios.create({
   baseURL: BASE,

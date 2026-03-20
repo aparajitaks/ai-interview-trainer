@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react'
+import { uploadAnalyze } from '../api/api'
 
 export default function RecordControls({ stream, onAnalysisComplete, setLoading, setStatus }) {
   const [recording, setRecording] = useState(false)
@@ -81,45 +82,23 @@ export default function RecordControls({ stream, onAnalysisComplete, setLoading,
 
           try {
             console.log('upload start')
-            const formData = new FormData()
-            // append as 'video' per API contract
-            formData.append('video', blob, 'recording.webm')
-            console.log('sending video to http://127.0.0.1:8000/analyze')
+            console.log('sending video for analysis')
 
-            const resp = await fetch('http://127.0.0.1:8000/analyze', {
-              method: 'POST',
-              body: formData,
-            })
-
-            if (!resp.ok) {
-              // try to get body text for debugging
-              let txt = ''
-              try {
-                txt = await resp.text()
-              } catch (_) {}
-              console.log('upload failed', resp.status, resp.statusText, txt)
+            let data = null
+            try {
+              data = await uploadAnalyze(blob)
+            } catch (err) {
+              console.log('upload failed', err)
               if (typeof setStatus === 'function') setStatus('error')
-              // surface error to parent so UI can show it
               if (typeof onAnalysisComplete === 'function') {
                 try {
-                  onAnalysisComplete({ error: `Server error ${resp.status}: ${resp.statusText} ${txt}` })
+                  onAnalysisComplete({ error: String(err) })
                 } catch (_) {}
               }
               return
             }
 
-            // server performs analysis and returns result in response
-            let data = null
-            try {
-              data = await resp.json()
-            } catch (e) {
-              // not JSON
-              const text = await resp.text()
-              data = { text }
-            }
-
             console.log('upload done')
-            console.log('result received')
             console.log('analysis result', data)
             // mark analyzing/done states briefly
             if (typeof setStatus === 'function') setStatus('analyzing')
