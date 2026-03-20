@@ -31,8 +31,10 @@ def _load_emotion_model() -> Any:
     try:
         from cv_models.emotion_model import load_emotion_model
 
+        print("loading model")
         log.info("Loading emotion model: %s", model_name)
         model = load_emotion_model(model_name)
+        print("model loaded")
         return model
     except Exception as exc:
         log.exception("Failed to load emotion model %s: %s", model_name, exc)
@@ -49,8 +51,10 @@ def _load_pose_model() -> Any:
     try:
         from cv_models.pose_detector import load_pose_detector
 
+        print("loading model")
         log.info("Loading pose detector (registry name: %s)", model_name)
         detector = load_pose_detector()
+        print("model loaded")
         return detector
     except Exception as exc:
         log.exception("Failed to load pose detector (registry name=%s): %s", model_name, exc)
@@ -95,10 +99,6 @@ def _get_or_load(name: str, loader) -> Optional[Any]:
 
         model = loader()
         _MODEL_CACHE[name] = model
-        if model is not None:
-            log.info("Model '%s' loaded and cached", name)
-        else:
-            log.warning("Model '%s' loader returned None (failed to load)", name)
         return model
 
 

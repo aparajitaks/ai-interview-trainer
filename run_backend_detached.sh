@@ -8,16 +8,14 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "$0")" && pwd)"
 cd "$ROOT_DIR"
 
-# Activate virtualenv if available
-if [ -f ".venv/bin/activate" ]; then
-  # shellcheck disable=SC1091
-  source .venv/bin/activate
-fi
-
-# Prefer .venv python if available
-PYTHON="python3"
-if [ -x ".venv/bin/python" ]; then
-  PYTHON=".venv/bin/python"
+# Prefer project-local virtualenv Python if available
+PYTHON_BIN="$ROOT_DIR/.venv/bin/python"
+if [ ! -x "$PYTHON_BIN" ]; then
+  if command -v python3 >/dev/null 2>&1; then
+    PYTHON_BIN="python3"
+  else
+    PYTHON_BIN="python"
+  fi
 fi
 
 # Ensure Python can import local packages
@@ -35,10 +33,5 @@ if command -v lsof >/dev/null 2>&1; then
   fi
 fi
 
-RELOAD_FLAG=""
-if [ "${AIIT_RELOAD-}" = "1" ] || [ "${AIIT_RELOAD-}" = "true" ]; then
-  RELOAD_FLAG="--reload"
-fi
-
-nohup bash -lc "${PYTHON} -m uvicorn api.main:app --host 127.0.0.1 --port ${PORT} ${RELOAD_FLAG}" > "$ROOT_DIR/uvicorn.log" 2>&1 &
+nohup bash -lc "$PYTHON_BIN -m uvicorn api.main:app --host 127.0.0.1 --port ${PORT}" > "$ROOT_DIR/uvicorn.log" 2>&1 &
 echo $!

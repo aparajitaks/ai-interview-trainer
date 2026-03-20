@@ -67,10 +67,7 @@ def create_app() -> FastAPI:
 
     @app.on_event("startup")
     def _log_startup():
-        from time import perf_counter
-
         print("startup begin")
-        start_ts = perf_counter()
         print("Starting AI Interview Trainer API")
         log.info("Starting AI Interview Trainer API")
         log.info("LOG_LEVEL=%s", LOG_LEVEL)
@@ -78,60 +75,20 @@ def create_app() -> FastAPI:
         log.info("STORAGE_DIR=%s", STORAGE_DIR)
         log.info("EMOTION_MODEL=%s", EMOTION_MODEL)
 
-        app.state.model_status = {"emotion": "not_loaded", "pose": "not_loaded", "gaze": "not_loaded"}
-        try:
-            preload = os.getenv("AIIT_PRELOAD_MODELS", "false").lower() in ("1", "true", "yes")
-            if preload:
-                try:
-                    from ai_models.model_loader import get_emotion_model
+        app.state.model_status = {"emotion": "lazy", "pose": "lazy", "gaze": "lazy"}
+        log.info("Model preload disabled; models will load lazily on first use")
 
-                    em = get_emotion_model()
-                    app.state.model_status["emotion"] = "loaded" if em is not None else "failed"
-                    log.info("Emotion model preload status: %s", app.state.model_status["emotion"])
-                except Exception:
-                    log.exception("Emotion preload failed")
-                    app.state.model_status["emotion"] = "failed"
-
-                try:
-                    from ai_models.model_loader import get_pose_model
-
-                    p = get_pose_model()
-                    app.state.model_status["pose"] = "loaded" if p is not None else "failed"
-                    log.info("Pose model preload status: %s", app.state.model_status["pose"])
-                except Exception:
-                    log.exception("Pose preload failed")
-                    app.state.model_status["pose"] = "failed"
-
-                try:
-                    from cv_models.gaze_detector import load_gaze_detector
-
-                    g = load_gaze_detector()
-                    app.state.model_status["gaze"] = "loaded" if g is not None else "failed"
-                    log.info("Gaze detector preload status: %s", app.state.model_status["gaze"])
-                except Exception:
-                    log.exception("Gaze preload failed")
-                    app.state.model_status["gaze"] = "failed"
-            else:
-                log.info("Model preload disabled (AIIT_PRELOAD_MODELS not set)")
-        except Exception:
-            log.exception("Error during model preload/status setup")
-
-        # Ensure DB tables exist and measure time
+        # Ensure DB tables exist
         try:
             from database.db import init_db
 
-            t0 = perf_counter()
             init_db()
-            db_elapsed = perf_counter() - t0
-            log.info("Database initialized on startup (%.3fs)", db_elapsed)
-            print("db init done (%.3fs)" % db_elapsed)
+            log.info("Database initialized on startup")
+            print("db init done")
         except Exception:
             log.exception("Failed to initialize database on startup")
 
-        # Mark router ready and total startup time
-        total_elapsed = perf_counter() - start_ts
-        log.info("Router ready; startup complete (%.3fs)", total_elapsed)
-        print("router ready; startup complete (%.3fs)" % total_elapsed)
+        print("router ready")
 
     return app
 
@@ -142,4 +99,4 @@ app = create_app()
 if __name__ == "__main__":
     import uvicorn
 
-    uvicorn.run("api.main:app", host="127.0.0.1", port=8000, reload=False)
+    uvicorn.run("api.main:app", host="0.0.0.0", port=8000)

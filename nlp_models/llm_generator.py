@@ -19,6 +19,24 @@ log = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
 
 QGEN_MODEL = os.getenv("QGEN_MODEL", "google/flan-t5-small")
+_GEN_PIPE = None
+
+
+def _get_pipeline():
+    """Lazy-load and cache the transformers text-generation pipeline."""
+    global _GEN_PIPE
+    if _GEN_PIPE is not None:
+        return _GEN_PIPE
+    try:
+        from transformers import pipeline
+
+        print("loading model")
+        _GEN_PIPE = pipeline("text-generation", model=QGEN_MODEL, device=-1)
+        print("model loaded")
+    except Exception as exc:
+        log.info("transformers not available or generation failed: %s; falling back", exc)
+        _GEN_PIPE = None
+    return _GEN_PIPE
 
 
 def _fallback_generate(role: str, history: List[str], last_answer: Optional[str], difficulty: Optional[str], keywords: Optional[List[str]]) -> str:
@@ -49,12 +67,9 @@ def generate_question(role: str = "", history: Optional[List[str]] = None, last_
     """
     history = history or []
     try:
-        # Lazy import to avoid hard dependency when not available
-        from transformers import pipeline
-
-        model_name = QGEN_MODEL
-        log.info("Using transformers model %s for question generation", model_name)
-        gen = pipeline("text-generation", model=model_name, device=-1)
+        gen = _get_pipeline()
+        if gen is None:
+            raise RuntimeError("LLM pipeline unavailable")
 
         prompt_parts = [f"You are an interviewer for the role: {role or 'general'}."]
         if history:

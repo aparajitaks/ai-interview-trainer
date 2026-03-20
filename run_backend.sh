@@ -5,24 +5,17 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "$0")" && pwd)"
 cd "$ROOT_DIR"
 
-# Prefer .venv python when present; allow enabling reload via AIIT_RELOAD=1
-PYTHON="python"
-if [ -x ".venv/bin/python" ]; then
-  PYTHON=".venv/bin/python"
+# Prefer project-local virtualenv Python if available
+PYTHON_BIN="$ROOT_DIR/.venv/bin/python"
+if [ ! -x "$PYTHON_BIN" ]; then
+  if command -v python3 >/dev/null 2>&1; then
+    PYTHON_BIN="python3"
+  else
+    PYTHON_BIN="python"
+  fi
 fi
 
-# Activate venv for interactive shells if requested
-if [ -f ".venv/bin/activate" ]; then
-  # shellcheck disable=SC1091
-  source .venv/bin/activate || true
-fi
-
-RELOAD_FLAG=""
-if [ "${AIIT_RELOAD-}" = "1" ] || [ "${AIIT_RELOAD-}" = "true" ]; then
-  RELOAD_FLAG="--reload"
-fi
-
-"${PYTHON}" -m uvicorn api.main:app \
+"$PYTHON_BIN" -m uvicorn api.main:app \
   --host 127.0.0.1 \
   --port 8000 \
-  ${RELOAD_FLAG}
+  --reload
