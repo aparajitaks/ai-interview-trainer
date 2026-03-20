@@ -9,7 +9,7 @@ import logging
 log = logging.getLogger(__name__)
 
 
-def create_session(session_id: str, role: Optional[str] = None) -> advanced_models.AdvancedInterviewSession:
+def create_session(session_id: str, role: Optional[str] = None, user_id: Optional[str] = None) -> advanced_models.AdvancedInterviewSession:
     db: Session = SessionLocal()
     try:
         # If session already exists, return it (idempotent create)
@@ -17,7 +17,7 @@ def create_session(session_id: str, role: Optional[str] = None) -> advanced_mode
         if s:
             log.info("Session %s already exists - returning existing", session_id)
             return s
-        s = advanced_models.AdvancedInterviewSession(session_id=session_id, role=role)
+        s = advanced_models.AdvancedInterviewSession(session_id=session_id, role=role, user_id=user_id)
         db.add(s)
         db.commit()
         db.refresh(s)

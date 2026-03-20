@@ -34,6 +34,11 @@ def init_db() -> None:
     except Exception:
         # advanced models may not exist in older versions; ignore failures
         pass
+    # import user model
+    try:
+        from . import user_model  # noqa: F401
+    except Exception:
+        pass
 
     log.info("Initializing database and creating tables (if not exist)")
     Base.metadata.create_all(bind=engine)
@@ -53,6 +58,8 @@ def init_db() -> None:
                     needs.append("ALTER TABLE adv_interview_answers ADD COLUMN keywords TEXT")
                 if 'feedback' not in cols:
                     needs.append("ALTER TABLE adv_interview_answers ADD COLUMN feedback TEXT")
+                if 'user_id' not in cols:
+                    needs.append("ALTER TABLE adv_interview_sessions ADD COLUMN user_id TEXT")
                 for stmt in needs:
                     try:
                         conn.exec_driver_sql(stmt)

@@ -15,11 +15,14 @@ except Exception:
     WhisperModel = None
 
 try:
-    from interview_engine.keyword_detector import detect_keywords
+    from interview_engine.keyword_detector import detect_keywords, strength_from_answer
 except Exception:
     detect_keywords = None
+    strength_from_answer = None
 
 from database import session_crud
+from auth.jwt_handler import get_current_user
+from fastapi import Depends
 from interview_engine.question_generator import generate_question
 try:
     from evaluation.llm_feedback import get_generator
@@ -58,10 +61,14 @@ class AnswerRequest(BaseModel):
 
 
 @router.post("/session/start", response_model=StartResponse)
-def start_session(req: StartRequest):
+def start_session(req: StartRequest, current_user: dict = Depends(get_current_user)):
     try:
         sid = str(uuid4())
-        session_crud.create_session(sid, role=req.role)
+        # associate session with the authenticated user
+        uid = None
+        if isinstance(current_user, dict):
+            uid = current_user.get("id")
+        session_crud.create_session(sid, role=req.role, user_id=str(uid) if uid is not None else None)
         # generate first question
         qtext = generate_question(req.role or "", [])
         q = session_crud.create_question(sid, 1, qtext)
@@ -72,7 +79,7 @@ def start_session(req: StartRequest):
 
 
 @router.post("/session/next")
-def next_question(req: NextRequest):
+def next_question(req: NextRequest, current_user: dict = Depends(get_current_user)):
     try:
         # determine how many questions exist and return next
         qs = session_crud.get_questions(req.session_id)
@@ -88,8 +95,28 @@ def next_question(req: NextRequest):
         if answers:
             last = answers[-1]
             last_answer_text = last.get("answer_text")
+        # compute detected keywords and strength for the last answer (if any)
+        detected_keywords = None
+        difficulty = None
+        if last_answer_text:
+            try:
+                if detect_keywords:
+                    try:
+                        # prefer stored keywords from DB, otherwise detect
+                        detected_keywords = last.get("keywords") if last.get("keywords") is not None else detect_keywords(role or "", last_answer_text)
+                    except Exception:
+                        detected_keywords = detect_keywords(role or "", last_answer_text)
+            except Exception:
+                log.exception("Keyword detection failed for next_question, session=%s", req.session_id)
+            try:
+                if strength_from_answer:
+                    difficulty_map = {"weak": "easy", "medium": "medium", "strong": "hard"}
+                    s = strength_from_answer(last_answer_text, detected_keywords or [])
+                    difficulty = difficulty_map.get(s, None)
+            except Exception:
+                log.exception("Strength detection failed for next_question, session=%s", req.session_id)
 
-        qtext = generate_question(role or "", history, last_answer_text)
+        qtext = generate_question(role or "", history, last_answer_text, difficulty=difficulty, keywords=detected_keywords)
         q = session_crud.create_question(req.session_id, idx, qtext)
         return {"done": False, "question": qtext, "question_index": idx, "question_id": q.id}
     except Exception as exc:
@@ -98,7 +125,7 @@ def next_question(req: NextRequest):
 
 
 @router.post("/session/answer")
-def submit_answer(req: AnswerRequest):
+def submit_answer(req: AnswerRequest, current_user: dict = Depends(get_current_user)):
     try:
         # If client didn't provide answer_text but provided a video, try to
         # extract audio and run Whisper transcription.
@@ -148,7 +175,7 @@ def submit_answer(req: AnswerRequest):
 
 
 @router.post("/session/finish")
-def finish_session(req: NextRequest):
+def finish_session(req: NextRequest, current_user: dict = Depends(get_current_user)):
     try:
         answers = session_crud.get_answers(req.session_id)
         if not answers:

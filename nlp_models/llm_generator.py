@@ -18,7 +18,7 @@ from typing import Optional, List
 log = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
 
-QGEN_MODEL = os.getenv("QGEN_MODEL", "gpt2")
+QGEN_MODEL = os.getenv("QGEN_MODEL", "google/flan-t5-small")
 
 
 def _fallback_generate(role: str, history: List[str], last_answer: Optional[str], difficulty: Optional[str], keywords: Optional[List[str]]) -> str:
@@ -81,6 +81,11 @@ def generate_question(role: str = "", history: Optional[List[str]] = None, last_
     except Exception as exc:
         log.info("transformers not available or generation failed: %s; falling back", exc)
         return _fallback_generate(role, history or [], last_answer, difficulty, keywords)
+
+
+def generate_llm_question(role: str = "", history: Optional[List[str]] = None, last_answer: Optional[str] = None, difficulty: Optional[str] = None, keywords: Optional[List[str]] = None) -> str:
+    """Alias for compatibility: explicit LLM-backed question generator."""
+    return generate_question(role=role, history=history, last_answer=last_answer, difficulty=difficulty, keywords=keywords)
 
 
 if __name__ == "__main__":

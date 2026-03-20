@@ -12,6 +12,8 @@ class AdvancedInterviewSession(Base):
     id = Column(Integer, primary_key=True, index=True)
     session_id = Column(String(64), unique=True, index=True, nullable=False)
     role = Column(String(64), nullable=True)
+    # optional link to the authenticated user who started the session
+    user_id = Column(String(64), nullable=True)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
 
     questions = relationship("AdvancedInterviewQuestion", back_populates="session")

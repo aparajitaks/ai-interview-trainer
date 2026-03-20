@@ -49,10 +49,17 @@ ROLE_QUESTIONS = {
         "What data preprocessing steps do you commonly use?",
         "How do you monitor model drift and maintain models in prod?",
     ],
+        "data": [
+            "Describe your experience with data pipelines and ETL.",
+            "How do you handle missing or corrupt data in production?",
+            "Explain a time you designed features for a predictive model.",
+            "Which statistical tests do you use to validate assumptions?",
+            "How do you monitor data quality and correctness in pipelines?",
+        ],
 }
 
 
-def generate_question(role: str, history: List[str], last_answer: Optional[str] = None) -> str:
+def generate_question(role: str, history: List[str], last_answer: Optional[str] = None, difficulty: Optional[str] = None, keywords: Optional[List[str]] = None) -> str:
     """Generate the next question. Prefer LLM-backed generator when available.
 
     Parameters
@@ -62,16 +69,15 @@ def generate_question(role: str, history: List[str], last_answer: Optional[str] 
     """
     # If we have an LLM generator available, attempt a focused generation.
     try:
-        keywords = []
-        difficulty = None
-        if detect_keywords and last_answer:
+        # prefer caller-provided keywords/difficulty; otherwise try to compute
+        if keywords is None and detect_keywords and last_answer:
             try:
                 keywords = detect_keywords(role or "", last_answer)
             except Exception:
                 keywords = []
-        if strength_from_answer and last_answer:
+        if difficulty is None and strength_from_answer and last_answer:
             try:
-                s = strength_from_answer(last_answer, keywords)
+                s = strength_from_answer(last_answer, keywords or [])
                 if s == "weak":
                     difficulty = "easy"
                 elif s == "strong":
@@ -92,6 +98,23 @@ def generate_question(role: str, history: List[str], last_answer: Optional[str] 
     pool = DEFAULT_QUESTIONS
     if role and role.lower() in ROLE_QUESTIONS:
         pool = ROLE_QUESTIONS[role.lower()]
+    # Deterministic adaptive rules for fallback generator
+    if not history:
+        # first question for the role
+        return pool[0] if pool else DEFAULT_QUESTIONS[0]
+
+    # if keywords present, ask a focused deeper question
+    if keywords:
+        top = keywords[0]
+        return f"Can you explain {top} in more detail and how you applied it?"
+
+    # difficulty influences which element to pick: easy -> early questions, hard -> deeper questions
+    if difficulty == "easy":
+        return pool[0]
+    if difficulty == "hard":
+        return pool[-1]
+
+    # medium or unknown - rotate through pool
     idx = len(history) % len(pool) if pool else 0
     return pool[idx]
 
