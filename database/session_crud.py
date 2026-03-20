@@ -138,3 +138,86 @@ def get_answers(session_id: str) -> List[Dict[str, Any]]:
         return out
     finally:
         db.close()
+
+
+def list_sessions(limit: int = 100) -> List[Dict[str, Any]]:
+    """Return recent advanced interview sessions with simple aggregates."""
+    db: Session = SessionLocal()
+    try:
+        rows = db.query(advanced_models.AdvancedInterviewSession).order_by(advanced_models.AdvancedInterviewSession.created_at.desc()).limit(limit).all()
+        out = []
+        for r in rows:
+            # compute average score for this session from answers
+            answers = db.query(advanced_models.AdvancedInterviewAnswer).filter_by(session_id=r.session_id).all()
+            avg = 0.0
+            if answers:
+                try:
+                    avg = sum([a.score for a in answers]) / len(answers)
+                except Exception:
+                    avg = 0.0
+            out.append({
+                "session_id": r.session_id,
+                "role": r.role,
+                "average_score": float(avg),
+                "created_at": r.created_at.isoformat(),
+            })
+        return out
+    finally:
+        db.close()
+
+
+def get_session_detail(session_id: str) -> Optional[Dict[str, Any]]:
+    """Return full session details: questions, answers, and aggregates."""
+    db: Session = SessionLocal()
+    try:
+        s = db.query(advanced_models.AdvancedInterviewSession).filter_by(session_id=session_id).first()
+        if not s:
+            return None
+        questions = db.query(advanced_models.AdvancedInterviewQuestion).filter_by(session_id=session_id).order_by(advanced_models.AdvancedInterviewQuestion.index).all()
+        answers = db.query(advanced_models.AdvancedInterviewAnswer).filter_by(session_id=session_id).order_by(advanced_models.AdvancedInterviewAnswer.created_at).all()
+
+        qlist = [{"id": q.id, "index": q.index, "question_text": q.question_text, "created_at": q.created_at.isoformat()} for q in questions]
+
+        import json
+        alist = []
+        for a in answers:
+            kws = []
+            try:
+                kws = json.loads(a.keywords) if a.keywords else []
+            except Exception:
+                kws = []
+            fb = None
+            try:
+                fb = json.loads(a.feedback) if a.feedback else None
+            except Exception:
+                fb = a.feedback
+            alist.append({
+                "id": a.id,
+                "question_id": a.question_id,
+                "score": a.score,
+                "emotion_score": a.emotion_score,
+                "posture_score": a.posture_score,
+                "eye_score": a.eye_score,
+                "answer_text": a.answer_text,
+                "keywords": kws,
+                "feedback": fb,
+                "created_at": a.created_at.isoformat(),
+            })
+
+        avg = 0.0
+        if alist:
+            try:
+                avg = sum([a["score"] for a in alist]) / len(alist)
+            except Exception:
+                avg = 0.0
+
+        return {
+            "session_id": s.session_id,
+            "role": s.role,
+            "created_at": s.created_at.isoformat(),
+            "questions": qlist,
+            "answers": alist,
+            "average_score": float(avg),
+        }
+    finally:
+        db.close()

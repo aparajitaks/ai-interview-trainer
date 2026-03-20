@@ -25,6 +25,7 @@ try:
     from evaluation.llm_feedback import get_generator
 except Exception:
     get_generator = None
+from database import crud as dbcrud
 
 log = logging.getLogger(__name__)
 router = APIRouter()
@@ -186,3 +187,53 @@ def finish_session(req: NextRequest):
     except Exception as exc:
         log.exception("Failed to finish session: %s", exc)
         raise HTTPException(status_code=500, detail="Failed to finish session")
+
+
+@router.get("/session/history")
+def list_session_history():
+    try:
+        try:
+            rows = session_crud.list_sessions()
+        except Exception:
+            log.exception("Failed to read session history from DB")
+            raise HTTPException(status_code=500, detail="DB read failed")
+        return rows
+    except HTTPException:
+        raise
+    except Exception as exc:
+        log.exception("Unhandled error in list_session_history: %s", exc)
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+
+@router.get("/session/{session_id}")
+def get_session_detail(session_id: str):
+    try:
+        try:
+            s = session_crud.get_session_detail(session_id)
+        except Exception:
+            log.exception("Failed to read session detail from DB: %s", session_id)
+            raise HTTPException(status_code=500, detail="DB read failed")
+        if s is None:
+            raise HTTPException(status_code=404, detail="Session not found")
+        return s
+    except HTTPException:
+        raise
+    except Exception as exc:
+        log.exception("Unhandled error in get_session_detail: %s", exc)
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+
+@router.get("/session/stats")
+def get_session_stats():
+    try:
+        try:
+            s = dbcrud.get_stats()
+        except Exception:
+            log.exception("Failed to compute stats from DB")
+            raise HTTPException(status_code=500, detail="DB read failed")
+        return s
+    except HTTPException:
+        raise
+    except Exception as exc:
+        log.exception("Unhandled error in get_session_stats: %s", exc)
+        raise HTTPException(status_code=500, detail="Internal server error")
