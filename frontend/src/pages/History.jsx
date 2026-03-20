@@ -56,20 +56,32 @@ export default function History() {
           <div className="text-center text-slate-300">Loading...</div>
         ) : (
           <div className="space-y-4">
-            {items.length === 0 ? (
+              {items.length === 0 ? (
               <div className="text-center text-slate-400">No interviews yet.</div>
             ) : (
               items.map((it) => (
-                <div key={it.id} className="rounded-xl p-4 bg-white/6 backdrop-blur-md border border-white/10 shadow-lg transform transition-all duration-200 hover:scale-102">
+                <div key={it.id || it.session_id} className="rounded-xl p-4 bg-white/6 backdrop-blur-md border border-white/10 shadow-lg transform transition-all duration-200 hover:scale-102">
                   <div className="flex items-center justify-between">
                     <div>
-                      <div className="text-white font-semibold">{`Interview #${it.id}`}</div>
-                      <div className="text-sm text-slate-300">{new Date(it.created_at).toLocaleString()}</div>
+                      <div className="text-white font-semibold">{`Interview ${it.session_id || it.id || ''}`}</div>
+                      <div className="text-sm text-slate-300">{it.created_at ? new Date(it.created_at).toLocaleString() : ''}</div>
                     </div>
                     <div className="text-right">
-                      <div className="text-2xl font-bold text-white">{Math.round((it.score ?? 0) * 100) || it.score}</div>
+                      <div className="text-2xl font-bold text-white">{Math.round((it.average_score ?? it.score ?? 0) * 100)}</div>
                       <div className="text-sm text-slate-300">Score</div>
                     </div>
+                  </div>
+                  <div className="mt-4 flex justify-end">
+                    <button
+                      onClick={() => {
+                        const sid = it.session_id || it.id
+                        if (sid) sessionStorage.setItem('aiit_session_id', sid)
+                        navigate('/results')
+                      }}
+                      className="px-4 py-2 rounded-lg bg-white/6 text-white border border-white/10 hover:scale-105"
+                    >
+                      View
+                    </button>
                   </div>
                 </div>
               ))
