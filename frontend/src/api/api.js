@@ -3,7 +3,7 @@ import axios from 'axios'
 const BASE =
   typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_API_BASE_URL
     ? import.meta.env.VITE_API_BASE_URL
-    : 'http://localhost:8000'
+    : 'http://127.0.0.1:8000'
 
 const client = axios.create({
   baseURL: BASE,
@@ -25,7 +25,13 @@ client.interceptors.request.use((config) => {
 })
 
 export async function startSession(role) {
-  const resp = await client.post('/session/start', { role })
+  const resp = await client.post('/session/start', { role: role || 'general' })
+  return resp.data
+}
+
+// Legacy non-auth flow to start an interview session; returns session_id and first_question
+export async function startInterview() {
+  const resp = await client.post('/interview/start')
   return resp.data
 }
 

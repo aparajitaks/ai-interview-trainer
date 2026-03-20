@@ -3,7 +3,7 @@ import CameraBox from '../components/CameraBox'
 import RecordControls from '../components/RecordControls'
 import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { startSession as apiStart, submitAnswer, nextQuestion, finishSession } from '../api/api'
+import { startSession as apiStart, startInterview, submitAnswer, nextQuestion, finishSession } from '../api/api'
 
 export default function InterviewSession() {
   const [sessionId, setSessionId] = useState(null)
@@ -22,23 +22,33 @@ export default function InterviewSession() {
   useEffect(() => {
     // Prefer session_id passed as a query parameter (RoleSelect now navigates
     // to /session?session_id=...). Fall back to sessionStorage for backwards
-    // compatibility (older flows or direct navigation).
-    try {
-      const params = new URLSearchParams(window.location.search)
-      const sid = params.get('session_id') || sessionStorage.getItem('aiit_session_id')
-      const q = params.get('question') || sessionStorage.getItem('aiit_question')
-      const qid = params.get('question_id') || sessionStorage.getItem('aiit_question_id')
-      if (sid) setSessionId(sid)
-      if (q) setQuestion(q)
-      if (qid) setQuestionId(qid)
-    } catch (e) {
-      const sid = sessionStorage.getItem('aiit_session_id')
-      const q = sessionStorage.getItem('aiit_question')
-      const qid = sessionStorage.getItem('aiit_question_id')
-      if (sid) setSessionId(sid)
-      if (q) setQuestion(q)
-      if (qid) setQuestionId(qid)
-    }
+    // compatibility (older flows or direct navigation). If none found, attempt
+    // a legacy interview start to get an initial question without auth.
+    (async () => {
+      try {
+        const params = new URLSearchParams(window.location.search)
+        const sid = params.get('session_id') || sessionStorage.getItem('aiit_session_id')
+        const q = params.get('question') || sessionStorage.getItem('aiit_question')
+        const qid = params.get('question_id') || sessionStorage.getItem('aiit_question_id')
+        if (sid) setSessionId(sid)
+        if (q) setQuestion(q)
+        if (qid) setQuestionId(qid)
+        if (!sid || !q) {
+          const data = await startInterview()
+          setSessionId(data.session_id)
+          setQuestion(data.first_question || data.question || 'Tell me about yourself')
+          setQuestionIndex(data.question_index ?? 1)
+          setQuestionId(data.question_id ?? 1)
+        }
+      } catch (e) {
+        const sid = sessionStorage.getItem('aiit_session_id')
+        const q = sessionStorage.getItem('aiit_question')
+        const qid = sessionStorage.getItem('aiit_question_id')
+        if (sid) setSessionId(sid)
+        if (q) setQuestion(q)
+        if (qid) setQuestionId(qid)
+      }
+    })()
   }, [])
 
   const startSession = async () => {
@@ -48,7 +58,7 @@ export default function InterviewSession() {
     setStatus('starting')
     setError('')
     try {
-      const data = await apiStart()
+      const data = await apiStart('general')
       setSessionId(data.session_id)
       setQuestion(data.question)
       setQuestionIndex(data.question_index ?? null)

@@ -3,7 +3,14 @@ import { useNavigate } from 'react-router-dom'
 import ScoreCard from '../components/ScoreCard'
 
 export default function Result({ result }) {
-  const data = result || {
+  // Normalize result shape from /analyze: may be {result: {...}} or flat scores
+  const normalized = (() => {
+    if (!result) return null
+    if (result.result && typeof result.result === 'object') return result.result
+    return result
+  })()
+
+  const data = normalized || {
     emotion: 0,
     eye: 0,
     posture: 0,
@@ -47,7 +54,7 @@ export default function Result({ result }) {
             <div className="flex-shrink-0 mb-6 md:mb-0">
               <div className="bg-gray-800 rounded-xl p-8 w-56 h-56 flex flex-col items-center justify-center shadow-lg">
                 <div className="text-sm text-gray-400">Final Score</div>
-                <div className="text-5xl font-bold mt-3">{pct(data.final)}%</div>
+                <div className="text-5xl font-bold mt-3">{pct(data.final ?? data.final_score ?? data.score)}%</div>
                 <div className="text-sm text-gray-300 mt-2">Overall performance</div>
               </div>
             </div>
@@ -57,15 +64,15 @@ export default function Result({ result }) {
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
                 <div className="bg-gray-800 rounded-lg p-4 text-center">
                   <div className="text-sm text-gray-400">Emotion</div>
-                  <div className="text-2xl font-bold mt-2">{pct(data.emotion)}%</div>
+                  <div className="text-2xl font-bold mt-2">{pct(data.emotion ?? data.emotion_score)}%</div>
                 </div>
                 <div className="bg-gray-800 rounded-lg p-4 text-center">
                   <div className="text-sm text-gray-400">Eye Contact</div>
-                  <div className="text-2xl font-bold mt-2">{pct(data.eye)}%</div>
+                  <div className="text-2xl font-bold mt-2">{pct(data.eye ?? data.eye_score ?? data.eye_contact_score)}%</div>
                 </div>
                 <div className="bg-gray-800 rounded-lg p-4 text-center">
                   <div className="text-sm text-gray-400">Posture</div>
-                  <div className="text-2xl font-bold mt-2">{pct(data.posture)}%</div>
+                  <div className="text-2xl font-bold mt-2">{pct(data.posture ?? data.posture_score)}%</div>
                 </div>
               </div>
 

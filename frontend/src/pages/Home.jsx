@@ -9,7 +9,7 @@ export default function Home() {
         <h1 className="text-4xl font-bold mb-6">AI Interview Trainer</h1>
         <p className="text-gray-400 mb-8">Practice video interviews and get instant feedback on emotion, eye contact and posture.</p>
         <button
-          onClick={() => nav('/interview')}
+          onClick={() => nav('/role')}
           className="px-6 py-3 bg-indigo-600 hover:bg-indigo-500 rounded-full text-white font-medium shadow-lg"
         >
           Start Interview

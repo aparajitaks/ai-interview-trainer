@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { startSession } from '../api/api'
+import { startSession, startInterview } from '../api/api'
 import { motion } from 'framer-motion'
 
 const ROLES = ['ML', 'Frontend', 'Backend', 'HR', 'DSA']
@@ -16,7 +16,18 @@ export default function RoleSelect() {
     if (!role) return setError('Please select a role before starting')
     try {
   setBusy(true)
-  const data = await startSession(role.toLowerCase())
+  // Try the auth-based session start; fall back to legacy interview start if auth is not configured
+  let data = null
+  try {
+    data = await startSession(role.toLowerCase())
+  } catch (err) {
+    console.warn('session/start failed, falling back to interview/start', err)
+    data = await startInterview()
+    // normalize fields to match session flow
+    data.question = data.first_question
+    data.question_id = 1
+    data.question_index = 1
+  }
   // save session id in sessionStorage for interview page (backwards compatibility)
   sessionStorage.setItem('aiit_session_id', data.session_id)
   sessionStorage.setItem('aiit_question', data.question || '')

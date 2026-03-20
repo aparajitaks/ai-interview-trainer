@@ -11,7 +11,7 @@ from database.user_crud import get_user_by_id
 
 log = logging.getLogger(__name__)
 
-_scheme = HTTPBearer()
+_scheme = HTTPBearer(auto_error=False)
 
 SECRET_KEY = getattr(settings, "JWT_SECRET", None) or "change-me-in-prod"
 ALGORITHM = getattr(settings, "JWT_ALGORITHM", "HS256")
@@ -35,6 +35,11 @@ def verify_token(token: str) -> Dict[str, Any]:
 
 
 def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(_scheme)) -> Dict[str, Any]:
+    # Allow anonymous access when no Authorization header is provided; preserves
+    # existing auth path when a token is present.
+    if credentials is None:
+        return {}
+
     token = credentials.credentials
     data = verify_token(token)
     sub = data.get("sub")
