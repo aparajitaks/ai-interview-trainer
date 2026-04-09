@@ -1,0 +1,64 @@
+INFO:     Will watch for changes in these directories: ['/Users/galaxy_grid/Acads/Projects/Ai/ai-interview-trainer']
+INFO:     Uvicorn running on http://127.0.0.1:8000 (Press CTRL+C to quit)
+INFO:     Started reloader process [42994] using WatchFiles
+INFO:     Started server process [43058]
+INFO:     Waiting for application startup.
+2026-04-09T17:09:43 | INFO     | src.api.app:91 | API startup: loading ML models …
+2026-04-09T17:09:43 | INFO     | src.pipeline.video_pipeline:212 | VideoAnalysisPipeline: initialising models …
+2026-04-09T17:09:43 | DEBUG    | src.cv_models.face_detection:87 | Loading Haar Cascade from: /Users/galaxy_grid/Acads/Projects/Ai/ai-interview-trainer/.venv/lib/python3.14/site-packages/cv2/data/haarcascade_frontalface_default.xml
+2026-04-09T17:09:43 | INFO     | src.cv_models.face_detection:97 | Haar Cascade classifier loaded successfully.
+W0000 00:00:1775734783.580945  592072 face_landmarker_graph.cc:180] Sets FaceBlendshapesGraph acceleration to xnnpack by default.
+I0000 00:00:1775734783.727607  592072 gl_context.cc:407] GL version: 2.1 (2.1 Metal - 90.5), renderer: Apple M3
+INFO: Created TensorFlow Lite XNNPACK delegate for CPU.
+W0000 00:00:1775734783.734480  592075 inference_feedback_manager.cc:121] Feedback manager requires a model with a single signature inference. Disabling support for feedback tensors.
+W0000 00:00:1775734783.749297  592077 inference_feedback_manager.cc:121] Feedback manager requires a model with a single signature inference. Disabling support for feedback tensors.
+2026-04-09T17:09:43 | INFO     | src.pipeline.video_pipeline:227 | FaceLandmarker (IMAGE mode) loaded from face_landmarker.task
+I0000 00:00:1775734783.772739  592083 gl_context.cc:407] GL version: 2.1 (2.1 Metal - 90.5), renderer: Apple M3
+W0000 00:00:1775734783.851548  592087 inference_feedback_manager.cc:121] Feedback manager requires a model with a single signature inference. Disabling support for feedback tensors.
+W0000 00:00:1775734783.866915  592088 inference_feedback_manager.cc:121] Feedback manager requires a model with a single signature inference. Disabling support for feedback tensors.
+2026-04-09T17:09:43 | INFO     | src.pipeline.video_pipeline:237 | PoseLandmarker LITE (IMAGE mode) loaded from pose_landmarker_lite.task
+2026-04-09T17:09:43 | INFO     | src.pipeline.video_pipeline:245 | VideoAnalysisPipeline: ready.
+2026-04-09T17:09:43 | INFO     | src.api.app:96 | API startup: models loaded — server is ready.
+INFO:     Application startup complete.
+INFO:     127.0.0.1:56797 - "GET /health HTTP/1.1" 200 OK
+Gemini question generation failed: 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-2.5-flash-lite\nPlease retry in 13.950605529s.', 'status': 'RESOURCE_EXHAUSTED', 'details': [{'@type': 'type.googleapis.com/google.rpc.Help', 'links': [{'description': 'Learn more about Gemini API quotas', 'url': 'https://ai.google.dev/gemini-api/docs/rate-limits'}]}, {'@type': 'type.googleapis.com/google.rpc.QuotaFailure', 'violations': [{'quotaMetric': 'generativelanguage.googleapis.com/generate_content_free_tier_requests', 'quotaId': 'GenerateRequestsPerDayPerProjectPerModel-FreeTier', 'quotaDimensions': {'location': 'global', 'model': 'gemini-2.5-flash-lite'}, 'quotaValue': '20'}]}, {'@type': 'type.googleapis.com/google.rpc.RetryInfo', 'retryDelay': '13s'}]}}
+2026-04-09T17:15:46 | INFO     | src.api.interview:118 | Interview started — session=6751a805  role='AI / ML Engineer'  rounds=3
+INFO:     127.0.0.1:56820 - "POST /interview/start HTTP/1.1" 200 OK
+LLM call failed (provider=gemini attempt 1/2): 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-2.5-flash-lite\nPlease retry in 44.628817882s.', 'status': 'RESOURCE_EXHAUSTED', 'details': [{'@type': 'type.googleapis.com/google.rpc.Help', 'links': [{'description': 'Learn more about Gemini API quotas', 'url': 'https://ai.google.dev/gemini-api/docs/rate-limits'}]}, {'@type': 'type.googleapis.com/google.rpc.QuotaFailure', 'violations': [{'quotaMetric': 'generativelanguage.googleapis.com/generate_content_free_tier_requests', 'quotaId': 'GenerateRequestsPerDayPerProjectPerModel-FreeTier', 'quotaDimensions': {'location': 'global', 'model': 'gemini-2.5-flash-lite'}, 'quotaValue': '20'}]}, {'@type': 'type.googleapis.com/google.rpc.RetryInfo', 'retryDelay': '44s'}]}}
+LLM call failed (provider=gemini attempt 2/2): 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-2.5-flash-lite\nPlease retry in 43.992569832s.', 'status': 'RESOURCE_EXHAUSTED', 'details': [{'@type': 'type.googleapis.com/google.rpc.Help', 'links': [{'description': 'Learn more about Gemini API quotas', 'url': 'https://ai.google.dev/gemini-api/docs/rate-limits'}]}, {'@type': 'type.googleapis.com/google.rpc.QuotaFailure', 'violations': [{'quotaMetric': 'generativelanguage.googleapis.com/generate_content_free_tier_requests', 'quotaId': 'GenerateRequestsPerDayPerProjectPerModel-FreeTier', 'quotaDimensions': {'location': 'global', 'model': 'gemini-2.5-flash-lite'}, 'quotaValue': '20'}]}, {'@type': 'type.googleapis.com/google.rpc.RetryInfo', 'retryDelay': '43s'}]}}
+LLM next-step failed (429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-2.5-flash-lite\nPlease retry in 43.992569832s.', 'status': 'RESOURCE_EXHAUSTED', 'details': [{'@type': 'type.googleapis.com/google.rpc.Help', 'links': [{'description': 'Learn more about Gemini API quotas', 'url': 'https://ai.google.dev/gemini-api/docs/rate-limits'}]}, {'@type': 'type.googleapis.com/google.rpc.QuotaFailure', 'violations': [{'quotaMetric': 'generativelanguage.googleapis.com/generate_content_free_tier_requests', 'quotaId': 'GenerateRequestsPerDayPerProjectPerModel-FreeTier', 'quotaDimensions': {'location': 'global', 'model': 'gemini-2.5-flash-lite'}, 'quotaValue': '20'}]}, {'@type': 'type.googleapis.com/google.rpc.RetryInfo', 'retryDelay': '43s'}]}}) — heuristic fallback.
+2026-04-09T17:16:16 | INFO     | src.api.ai_interview:153 | V5 next-step — session=6751a805  score=1  follow_up=True  depth=0  complete=False
+INFO:     127.0.0.1:56830 - "POST /ai-next-question HTTP/1.1" 200 OK
+WARNING:  WatchFiles detected changes in 'src/llm_engine/client.py'. Reloading...
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+2026-04-09T17:18:21 | INFO     | src.api.app:100 | API shutdown: releasing ML models.
+2026-04-09T17:18:21 | INFO     | src.pipeline.video_pipeline:287 | VideoAnalysisPipeline: resources released.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [43058]
+INFO:     Started server process [46124]
+INFO:     Waiting for application startup.
+2026-04-09T17:18:24 | INFO     | src.api.app:91 | API startup: loading ML models …
+2026-04-09T17:18:24 | INFO     | src.pipeline.video_pipeline:212 | VideoAnalysisPipeline: initialising models …
+2026-04-09T17:18:24 | DEBUG    | src.cv_models.face_detection:87 | Loading Haar Cascade from: /Users/galaxy_grid/Acads/Projects/Ai/ai-interview-trainer/.venv/lib/python3.14/site-packages/cv2/data/haarcascade_frontalface_default.xml
+2026-04-09T17:18:24 | INFO     | src.cv_models.face_detection:97 | Haar Cascade classifier loaded successfully.
+W0000 00:00:1775735304.206663  602624 face_landmarker_graph.cc:180] Sets FaceBlendshapesGraph acceleration to xnnpack by default.
+I0000 00:00:1775735304.337183  602624 gl_context.cc:407] GL version: 2.1 (2.1 Metal - 90.5), renderer: Apple M3
+INFO: Created TensorFlow Lite XNNPACK delegate for CPU.
+W0000 00:00:1775735304.343794  602627 inference_feedback_manager.cc:121] Feedback manager requires a model with a single signature inference. Disabling support for feedback tensors.
+W0000 00:00:1775735304.360425  602627 inference_feedback_manager.cc:121] Feedback manager requires a model with a single signature inference. Disabling support for feedback tensors.
+2026-04-09T17:18:24 | INFO     | src.pipeline.video_pipeline:227 | FaceLandmarker (IMAGE mode) loaded from face_landmarker.task
+I0000 00:00:1775735304.380576  602643 gl_context.cc:407] GL version: 2.1 (2.1 Metal - 90.5), renderer: Apple M3
+W0000 00:00:1775735304.462783  602651 inference_feedback_manager.cc:121] Feedback manager requires a model with a single signature inference. Disabling support for feedback tensors.
+W0000 00:00:1775735304.481038  602653 inference_feedback_manager.cc:121] Feedback manager requires a model with a single signature inference. Disabling support for feedback tensors.
+2026-04-09T17:18:24 | INFO     | src.pipeline.video_pipeline:237 | PoseLandmarker LITE (IMAGE mode) loaded from pose_landmarker_lite.task
+2026-04-09T17:18:24 | INFO     | src.pipeline.video_pipeline:245 | VideoAnalysisPipeline: ready.
+2026-04-09T17:18:24 | INFO     | src.api.app:96 | API startup: models loaded — server is ready.
+INFO:     Application startup complete.
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+2026-04-09T17:19:36 | INFO     | src.api.app:100 | API shutdown: releasing ML models.
+2026-04-09T17:19:36 | INFO     | src.pipeline.video_pipeline:287 | VideoAnalysisPipeline: resources released.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [46124]
+INFO:     Stopping reloader process [42994]

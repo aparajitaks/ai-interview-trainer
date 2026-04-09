@@ -1,0 +1,22 @@
+# AI Interview Trainer — Python Dependencies
+# ------------------------------------------
+# Install:  pip install -r requirements.txt
+# Webcam:   python -m src.main
+# API:      uvicorn src.api.app:app --host 0.0.0.0 --port 8000 --reload
+
+# ── Core computer-vision ──────────────────────────────────────────────────────
+opencv-python>=4.8.0,<5.0.0
+numpy>=1.24.0,<3.0.0
+
+# ── V2: Behaviour Analysis (MediaPipe Tasks API) ──────────────────────────────
+mediapipe>=0.10.0,<1.0.0
+
+# ── API Backend (FastAPI) ─────────────────────────────────────────────────────
+fastapi>=0.110.0,<1.0.0
+uvicorn[standard]>=0.27.0
+python-multipart>=0.0.9    # required for UploadFile / Form support
+
+# ── Live Interview — AI backend (Gemini) ─────────────────────────────────────
+# Powers: question generation, answer evaluation, audio transcription (STT).
+# Set GEMINI_API_KEY env var to activate.  Works without it (mock mode).
+google-genai>=1.0.0
