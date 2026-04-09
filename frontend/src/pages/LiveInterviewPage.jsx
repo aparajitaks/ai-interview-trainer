@@ -47,7 +47,7 @@ export default function LiveInterviewPage() {
     phase, sessionId, role, setRole,
     question, questionType, roundNumber, totalRounds,
     lastTranscript, lastFeedback, lastScore,
-    finalResult, error, elapsed,
+    finalResult, error, isFinalizingLastAnswer, elapsed,
     isFollowUp, followUpReason,
     begin, onRecordingStarted, submitAudio, submitCode, skip, quit, reset,
   } = useInterview()
@@ -267,7 +267,9 @@ export default function LiveInterviewPage() {
                   {phase === STATES.PROCESSING && (
                     <div className="mt-5 flex items-center gap-2 text-indigo-300">
                       <Spinner size="sm" />
-                      <span className="text-sm">AI is analyzing your answer...</span>
+                      <span className="text-sm">
+                        {isFinalizingLastAnswer ? 'Processing your final answer...' : 'AI is analyzing your answer...'}
+                      </span>
                     </div>
                   )}
 
@@ -431,7 +433,7 @@ export default function LiveInterviewPage() {
                 <div className="w-full py-4 rounded-2xl flex items-center justify-center gap-3
                                 glass text-gray-500 font-semibold">
                   <Spinner size="sm" />
-                  AI is thinking…
+                  {isFinalizingLastAnswer ? 'Processing your final answer...' : 'AI is thinking...'}
                 </div>
               )}
             </motion.div>

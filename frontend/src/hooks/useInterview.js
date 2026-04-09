@@ -27,6 +27,7 @@ export function useInterview() {
   const [lastImprovementSuggestion, setLastImprovementSuggestion] = useState('')
   const [finalResult, setFinalResult] = useState(null)
   const [error, setError] = useState('')
+  const [isFinalizingLastAnswer, setIsFinalizingLastAnswer] = useState(false)
   const [isFollowUp, setIsFollowUp] = useState(false)
   const [followUpReason, setFollowUpReason] = useState(null)
 
@@ -85,6 +86,7 @@ export function useInterview() {
       setLastExpectedAnswer('')
       setLastGapAnalysis('')
       setLastImprovementSuggestion('')
+      setIsFinalizingLastAnswer(false)
 
       try {
         const data = await submitAnswer({ sessionId, audioBlob })
@@ -97,9 +99,11 @@ export function useInterview() {
         setIsFollowUp(data.follow_up || data.is_follow_up || false)
         setFollowUpReason(data.follow_up_reason || null)
 
-        if (data.is_complete) {
+        if (data.is_last || data.is_complete) {
+          setIsFinalizingLastAnswer(true)
           const final = await endInterview(sessionId)
           setFinalResult(final)
+          setIsFinalizingLastAnswer(false)
           setPhase(STATES.COMPLETE)
         } else {
           setQuestion(data.next_question)
@@ -109,6 +113,7 @@ export function useInterview() {
           setPhase(STATES.QUESTION)
         }
       } catch (err) {
+        setIsFinalizingLastAnswer(false)
         setError(err.message)
         setPhase(STATES.ERROR)
       }
@@ -168,6 +173,7 @@ export function useInterview() {
     setLastExpectedAnswer('')
     setLastGapAnalysis('')
     setLastImprovementSuggestion('')
+    setIsFinalizingLastAnswer(false)
     setFinalResult(null)
     setError('')
     setIsFollowUp(false)
@@ -184,6 +190,7 @@ export function useInterview() {
       setLastExpectedAnswer('')
       setLastGapAnalysis('')
       setLastImprovementSuggestion('')
+      setIsFinalizingLastAnswer(false)
 
       try {
         const data = await submitCodeAnswer({ sessionId, answer: codeAnswer })
@@ -196,9 +203,11 @@ export function useInterview() {
         setIsFollowUp(data.follow_up || data.is_follow_up || false)
         setFollowUpReason(data.follow_up_reason || null)
 
-        if (data.is_complete) {
+        if (data.is_last || data.is_complete) {
+          setIsFinalizingLastAnswer(true)
           const final = await endInterview(sessionId)
           setFinalResult(final)
+          setIsFinalizingLastAnswer(false)
           setPhase(STATES.COMPLETE)
         } else {
           setQuestion(data.next_question)
@@ -208,6 +217,7 @@ export function useInterview() {
           setPhase(STATES.QUESTION)
         }
       } catch (err) {
+        setIsFinalizingLastAnswer(false)
         setError(err.message)
         setPhase(STATES.ERROR)
       }
@@ -232,6 +242,7 @@ export function useInterview() {
     lastImprovementSuggestion,
     finalResult,
     error,
+    isFinalizingLastAnswer,
     elapsed,
     isFollowUp,
     followUpReason,

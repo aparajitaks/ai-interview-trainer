@@ -80,6 +80,8 @@ class SubmitResponse(BaseModel):
     example:          Optional[str] = None
     next_question:    Optional[str]
     type:             Literal["coding", "text"] = "text"
+    is_last:          bool = False
+    message:          Optional[str] = None
     is_complete:      bool
     round_number:     int
     total_rounds:     int
@@ -327,8 +329,7 @@ async def submit_answer(
             follow_up_depth = (session.rounds[-1].follow_up_depth + 1) if is_follow_up else 0,
         )
     else:
-        complete_session(session_id)
-        logger.info("Interview complete — session=%s", session_id[:8])
+        logger.info("Final answer processed — session=%s", session_id[:8])
 
     logger.info(
         "V5 submit — session=%s  score=%d  follow_up=%s  complete=%s",
@@ -348,6 +349,8 @@ async def submit_answer(
         example          = result_example,
         next_question    = next_q,
         type             = next_q_type if not is_complete else "text",
+        is_last          = is_complete,
+        message          = "Interview complete" if is_complete else None,
         is_complete      = is_complete,
         round_number     = completed_rounds,
         total_rounds     = session.max_rounds,
