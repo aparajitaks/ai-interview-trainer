@@ -7,6 +7,15 @@
 
 const API_BASE = import.meta.env.VITE_API_URL ?? 'http://localhost:8000'
 
+async function apiCall(path, options) {
+  try {
+    return await fetch(`${API_BASE}${path}`, options)
+  } catch (err) {
+    console.error('API ERROR:', err)
+    throw err
+  }
+}
+
 /**
  * POST /analyze-video
  * Sends a video file as multipart/form-data and returns the analysis result.
@@ -66,6 +75,6 @@ export async function analyzeVideo(file, onProgress) {
  * @returns {Promise<{status: string, pipeline_ready: boolean}>}
  */
 export async function checkHealth() {
-  const res = await fetch(`${API_BASE}/health`)
+  const res = await apiCall('/health')
   return res.json()
 }

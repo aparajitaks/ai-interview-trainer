@@ -7,6 +7,15 @@
 
 const API_BASE = import.meta.env.VITE_API_URL ?? 'http://localhost:8000'
 
+async function apiCall(path, options) {
+  try {
+    return await fetch(`${API_BASE}${path}`, options)
+  } catch (err) {
+    console.error('API ERROR:', err)
+    throw err
+  }
+}
+
 async function parseError(res, fallbackMessage) {
   const err = await res.json().catch(() => ({}))
   throw new Error(err.detail ?? fallbackMessage)
@@ -15,7 +24,7 @@ async function parseError(res, fallbackMessage) {
 async function requestWithFallbacks({ candidates, options, errorMessage }) {
   let lastStatus = null
   for (const path of candidates) {
-    const res = await fetch(`${API_BASE}${path}`, options)
+    const res = await apiCall(path, options)
     if (res.ok) return res.json()
     lastStatus = res.status
     // Try next candidate only when route is missing.
