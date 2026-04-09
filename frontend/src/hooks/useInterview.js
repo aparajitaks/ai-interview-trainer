@@ -49,6 +49,12 @@ export function useInterview() {
 
   useEffect(() => () => clearInterval(timerRef.current), [])
 
+  useEffect(() => {
+    if (!question) return
+    // New question loaded: always clear finalizing state.
+    setIsFinalizingLastAnswer(false)
+  }, [question])
+
   const begin = useCallback(
     async (selectedRole = role, rounds = 5) => {
       setPhase(STATES.STARTING)
@@ -90,6 +96,12 @@ export function useInterview() {
 
       try {
         const data = await submitAnswer({ sessionId, audioBlob })
+        console.log('[submitAudio] response:', {
+          round_number: data.round_number,
+          total_rounds: data.total_rounds,
+          is_last: data.is_last,
+          is_complete: data.is_complete,
+        })
         setLastTranscript(data.transcript)
         setLastFeedback(data.feedback)
         setLastScore(data.score)
@@ -99,7 +111,7 @@ export function useInterview() {
         setIsFollowUp(data.follow_up || data.is_follow_up || false)
         setFollowUpReason(data.follow_up_reason || null)
 
-        if (data.is_last || data.is_complete) {
+        if (data.is_last) {
           setIsFinalizingLastAnswer(true)
           const final = await endInterview(sessionId)
           setFinalResult(final)
@@ -194,6 +206,12 @@ export function useInterview() {
 
       try {
         const data = await submitCodeAnswer({ sessionId, answer: codeAnswer })
+        console.log('[submitCode] response:', {
+          round_number: data.round_number,
+          total_rounds: data.total_rounds,
+          is_last: data.is_last,
+          is_complete: data.is_complete,
+        })
         setLastTranscript(data.transcript)
         setLastFeedback(data.feedback)
         setLastScore(data.score)
@@ -203,7 +221,7 @@ export function useInterview() {
         setIsFollowUp(data.follow_up || data.is_follow_up || false)
         setFollowUpReason(data.follow_up_reason || null)
 
-        if (data.is_last || data.is_complete) {
+        if (data.is_last) {
           setIsFinalizingLastAnswer(true)
           const final = await endInterview(sessionId)
           setFinalResult(final)

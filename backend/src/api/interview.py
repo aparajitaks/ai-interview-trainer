@@ -296,6 +296,8 @@ async def submit_answer(
         follow_up_reason = step.follow_up_reason
 
     # ── Persist and advance round counter ─────────────────────────────────
+    # Capture pre-submit index so "last" means: this answer just completed final slot.
+    round_before_submit = session.current_round
     record_answer(
         session_id,
         saved_answer,
@@ -311,6 +313,7 @@ async def submit_answer(
     )
 
     completed_rounds = session.current_round
+    is_last_answered = (round_before_submit + 1) == session.max_rounds
     is_complete      = completed_rounds >= session.max_rounds
     next_q: Optional[str] = None
 
@@ -349,8 +352,8 @@ async def submit_answer(
         example          = result_example,
         next_question    = next_q,
         type             = next_q_type if not is_complete else "text",
-        is_last          = is_complete,
-        message          = "last question answered" if is_complete else None,
+        is_last          = is_last_answered,
+        message          = "last question answered" if is_last_answered else None,
         is_complete      = is_complete,
         round_number     = completed_rounds,
         total_rounds     = session.max_rounds,

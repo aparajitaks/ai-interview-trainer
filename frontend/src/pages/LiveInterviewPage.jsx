@@ -56,6 +56,13 @@ export default function LiveInterviewPage() {
   const isInterviewActive = phase === STATES.QUESTION || phase === STATES.RECORDING || phase === STATES.PROCESSING
   const isLastQuestion = roundNumber >= totalRounds
 
+  useEffect(() => {
+    const isProcessing = phase === STATES.PROCESSING
+    console.log('Q index:', roundNumber)
+    console.log('isProcessing:', isProcessing)
+    console.log('isLast:', isLastQuestion)
+  }, [roundNumber, phase, isLastQuestion])
+
 
 
   /* ── 15-second inactivity auto-skip timer ────────────────────────── */
