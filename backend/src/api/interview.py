@@ -14,15 +14,15 @@ Endpoints
 
 from __future__ import annotations
 
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, Literal
 
-from fastapi import APIRouter, File, Form, HTTPException, UploadFile, status
+from fastapi import APIRouter, File, Form, HTTPException, Request, UploadFile, status
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
 from src.interview.llm import (
-    generate_first_question,
-    generate_next_question,
+    generate_first_question_payload,
+    generate_next_question_payload,
 )
 from src.interview.session import (
     InterviewSession,
@@ -61,6 +61,7 @@ class StartRequest(BaseModel):
 class StartResponse(BaseModel):
     session_id:   str
     question:     str
+    type:         Literal["coding", "text"] = "text"
     round_number: int
     total_rounds: int
 
@@ -77,6 +78,7 @@ class SubmitResponse(BaseModel):
     key_points:       Optional[list[str]] = None
     example:          Optional[str] = None
     next_question:    Optional[str]
+    type:             Literal["coding", "text"] = "text"
     is_complete:      bool
     round_number:     int
     total_rounds:     int
@@ -142,8 +144,8 @@ async def start_interview(body: StartRequest) -> StartResponse:
     - **role**: Job title the candidate is being interviewed for.
     - **max_rounds**: How many question-answer rounds (default 5).
     """
-    session  = create_session(role=body.role.strip(), max_rounds=body.max_rounds)
-    question = generate_first_question(session.role)
+    session = create_session(role=body.role.strip(), max_rounds=body.max_rounds)
+    question, question_type = generate_first_question_payload(session.role)
     add_question(session.session_id, question)
 
     logger.info(
@@ -153,6 +155,7 @@ async def start_interview(body: StartRequest) -> StartResponse:
     return StartResponse(
         session_id   = session.session_id,
         question     = question,
+        type         = question_type,
         round_number = 1,
         total_rounds = session.max_rounds,
     )
@@ -164,8 +167,10 @@ async def start_interview(body: StartRequest) -> StartResponse:
     summary         = "Submit a recorded audio answer",
 )
 async def submit_answer(
-    session_id: str        = Form(..., description="Session ID from /start"),
-    audio:      UploadFile = File(..., description="Recorded audio (WebM/M4A/WAV)"),
+    request: Request,
+    session_id: Optional[str] = Form(None, description="Session ID from /start"),
+    audio: Optional[UploadFile] = File(None, description="Recorded audio (WebM/M4A/WAV)"),
+    answer: Optional[str] = Form(None, description="Direct text/code answer"),
 ) -> SubmitResponse:
     """
     Live interview flow:
@@ -174,6 +179,20 @@ async def submit_answer(
     3. Apply cross-questioning logic.
     4. Persist rich learning feedback.
     """
+    if session_id is None:
+        try:
+            json_body = await request.json()
+        except Exception:
+            json_body = {}
+        session_id = json_body.get("session_id")
+        answer = answer or json_body.get("answer")
+
+    if not session_id:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="session_id is required.",
+        )
+
     session = _require_session(session_id)
 
     if session.status == "completed":
@@ -182,18 +201,25 @@ async def submit_answer(
             detail      = "This interview session has already ended.",
         )
 
-    # ── Read & transcribe audio ───────────────────────────────────────────
-    raw_bytes = await audio.read()
-    filename  = audio.filename or "recording.webm"
-    ext       = filename.rsplit(".", 1)[-1].lower() if "." in filename else "webm"
-
-    logger.info(
-        "Audio received — session=%s  bytes=%d  ext=%s",
-        session_id[:8], len(raw_bytes), ext,
-    )
-
-    transcript = transcribe(raw_bytes, ext)
-    logger.info("Transcript: %s…", transcript[:80])
+    # ── Read text/code answer OR transcribe audio ─────────────────────────
+    if answer is not None:
+        transcript = answer
+        logger.info("Text answer received — session=%s chars=%d", session_id[:8], len(transcript))
+    elif audio is not None:
+        raw_bytes = await audio.read()
+        filename = audio.filename or "recording.webm"
+        ext = filename.rsplit(".", 1)[-1].lower() if "." in filename else "webm"
+        logger.info(
+            "Audio received — session=%s  bytes=%d  ext=%s",
+            session_id[:8], len(raw_bytes), ext,
+        )
+        transcript = transcribe(raw_bytes, ext)
+        logger.info("Transcript: %s…", transcript[:80])
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Provide either audio file or answer text.",
+        )
 
     normalized = (transcript or "").strip()
     is_skipped = normalized == "" or normalized.upper() == "SKIPPED"
@@ -284,9 +310,10 @@ async def submit_answer(
         if is_skipped:
             prev_qs = [r.question for r in session.rounds]
             prev_as = [r.answer if r.answer != "SKIPPED" else "[skipped]" for r in session.rounds]
-            next_q = generate_next_question(session.role, prev_qs, prev_as)
+            next_q, next_q_type = generate_next_question_payload(session.role, prev_qs, prev_as)
         else:
             next_q = step.next_question
+            next_q_type = "coding" if "implement" in (next_q or "").lower() or "write" in (next_q or "").lower() else "text"
         add_question_v5(
             session_id      = session_id,
             question        = next_q,
@@ -314,6 +341,7 @@ async def submit_answer(
         key_points       = result_key_points,
         example          = result_example,
         next_question    = next_q,
+        type             = next_q_type if not is_complete else "text",
         is_complete      = is_complete,
         round_number     = completed_rounds,
         total_rounds     = session.max_rounds,
@@ -365,7 +393,7 @@ async def skip_question(
         # Exclude SKIPPED answers from context so LLM gets real Q&A only
         prev_qs = [r.question for r in session.rounds]
         prev_as = [r.answer if r.answer != "SKIPPED" else "[skipped]" for r in session.rounds]
-        next_q  = generate_next_question(session.role, prev_qs, prev_as)
+        next_q, _ = generate_next_question_payload(session.role, prev_qs, prev_as)
         add_question(session_id, next_q)
     else:
         complete_session(session_id)

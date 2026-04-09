@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { startInterview, submitAnswer, skipQuestion, endInterview } from '../services/interviewApi.js'
+import { startInterview, submitAnswer, submitCodeAnswer, skipQuestion, endInterview } from '../services/interviewApi.js'
 
 export const STATES = {
   IDLE: 'idle',
@@ -16,6 +16,7 @@ export function useInterview() {
   const [sessionId, setSessionId] = useState(null)
   const [role, setRole] = useState('Software Engineer')
   const [question, setQuestion] = useState('')
+  const [questionType, setQuestionType] = useState('text')
   const [roundNumber, setRoundNumber] = useState(0)
   const [totalRounds, setTotalRounds] = useState(5)
   const [lastTranscript, setLastTranscript] = useState('')
@@ -57,6 +58,7 @@ export function useInterview() {
         setSessionId(data.session_id)
         setRole(selectedRole)
         setQuestion(data.question)
+        setQuestionType(data.type || 'text')
         setRoundNumber(data.round_number)
         setTotalRounds(data.total_rounds)
         setPhase(STATES.QUESTION)
@@ -101,6 +103,7 @@ export function useInterview() {
           setPhase(STATES.COMPLETE)
         } else {
           setQuestion(data.next_question)
+          setQuestionType(data.type || 'text')
           setRoundNumber(data.round_number + 1)
           resetTimer()
           setPhase(STATES.QUESTION)
@@ -126,6 +129,7 @@ export function useInterview() {
         setPhase(STATES.COMPLETE)
       } else {
         setQuestion(data.next_question)
+        setQuestionType('text')
         setRoundNumber(data.round_number + 1)
         resetTimer()
         setPhase(STATES.QUESTION)
@@ -156,6 +160,7 @@ export function useInterview() {
     setPhase(STATES.IDLE)
     setSessionId(null)
     setQuestion('')
+    setQuestionType('text')
     setRoundNumber(0)
     setLastTranscript('')
     setLastFeedback('')
@@ -169,12 +174,54 @@ export function useInterview() {
     setFollowUpReason(null)
   }, [])
 
+  const submitCode = useCallback(
+    async (codeAnswer) => {
+      stopTimer()
+      setPhase(STATES.PROCESSING)
+      setLastTranscript('')
+      setLastFeedback('')
+      setLastScore(null)
+      setLastExpectedAnswer('')
+      setLastGapAnalysis('')
+      setLastImprovementSuggestion('')
+
+      try {
+        const data = await submitCodeAnswer({ sessionId, answer: codeAnswer })
+        setLastTranscript(data.transcript)
+        setLastFeedback(data.feedback)
+        setLastScore(data.score)
+        setLastExpectedAnswer(data.expected_answer || '')
+        setLastGapAnalysis(data.gap_analysis || '')
+        setLastImprovementSuggestion(data.improvement_suggestion || '')
+        setIsFollowUp(data.follow_up || data.is_follow_up || false)
+        setFollowUpReason(data.follow_up_reason || null)
+
+        if (data.is_complete) {
+          const final = await endInterview(sessionId)
+          setFinalResult(final)
+          setPhase(STATES.COMPLETE)
+        } else {
+          setQuestion(data.next_question)
+          setQuestionType(data.type || 'text')
+          setRoundNumber(data.round_number + 1)
+          resetTimer()
+          setPhase(STATES.QUESTION)
+        }
+      } catch (err) {
+        setError(err.message)
+        setPhase(STATES.ERROR)
+      }
+    },
+    [sessionId]
+  )
+
   return {
     phase,
     sessionId,
     role,
     setRole,
     question,
+    questionType,
     roundNumber,
     totalRounds,
     lastTranscript,
@@ -191,6 +238,7 @@ export function useInterview() {
     begin,
     onRecordingStarted,
     submitAudio,
+    submitCode,
     skip,
     quit,
     reset,

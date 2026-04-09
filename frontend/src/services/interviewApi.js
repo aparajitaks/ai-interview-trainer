@@ -64,7 +64,9 @@ export async function startInterview({ role, maxRounds = 5 }) {
 export async function submitAnswer({ sessionId, audioBlob }) {
   const fd = new FormData()
   fd.append('session_id', sessionId)
-  fd.append('audio', audioBlob, 'recording.webm')
+  if (audioBlob) {
+    fd.append('audio', audioBlob, 'recording.webm')
+  }
 
   return requestWithFallbacks({
     candidates: ['/submit-answer', '/interview/submit-answer'],
@@ -73,6 +75,30 @@ export async function submitAnswer({ sessionId, audioBlob }) {
       body: fd,
     },
     errorMessage: 'Failed to submit answer',
+  })
+}
+
+export async function submitCodeAnswer({ sessionId, answer }) {
+  return requestWithFallbacks({
+    candidates: ['/submit-answer', '/interview/submit-answer'],
+    options: {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ session_id: sessionId, answer }),
+    },
+    errorMessage: 'Failed to submit answer',
+  })
+}
+
+export async function runCode({ code, input = '' }) {
+  return requestWithFallbacks({
+    candidates: ['/run-code'],
+    options: {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code, input }),
+    },
+    errorMessage: 'Failed to run code',
   })
 }
 

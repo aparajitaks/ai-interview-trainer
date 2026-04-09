@@ -7,6 +7,7 @@ import AnimatedBar                        from '../components/ui/AnimatedBar.jsx
 import Badge                              from '../components/ui/Badge.jsx'
 import ProgressHeader                     from '../components/ui/ProgressHeader.jsx'
 import WebcamPreview                      from '../components/ui/WebcamPreview.jsx'
+import CodeEditor                         from '../components/CodeEditor.jsx'
 import { useInterview, STATES }           from '../hooks/useInterview.js'
 import { useAudioRecorder }              from '../hooks/useAudioRecorder.js'
 
@@ -44,11 +45,11 @@ export default function LiveInterviewPage() {
   /* Interview state machine */
   const {
     phase, sessionId, role, setRole,
-    question, roundNumber, totalRounds,
+    question, questionType, roundNumber, totalRounds,
     lastTranscript, lastFeedback, lastScore,
     finalResult, error, elapsed,
     isFollowUp, followUpReason,
-    begin, onRecordingStarted, submitAudio, skip, quit, reset,
+    begin, onRecordingStarted, submitAudio, submitCode, skip, quit, reset,
   } = useInterview()
 
   /* Whether the interview is in an active answering phase */
@@ -65,7 +66,7 @@ export default function LiveInterviewPage() {
   // Start / reset countdown whenever a new question appears.
   // Clear it if the user starts recording or phase changes away from QUESTION.
   useEffect(() => {
-    if (phase !== STATES.QUESTION) {
+    if (phase !== STATES.QUESTION || questionType === 'coding') {
       clearInterval(countdownRef.current)
       setCountdown(AUTO_SKIP_SECS)
       setAutoSkipAlert(false)
@@ -88,7 +89,7 @@ export default function LiveInterviewPage() {
     }, 1000)
 
     return () => clearInterval(countdownRef.current)
-  }, [phase, question]) // restarts every time a new question loads
+  }, [phase, question, questionType]) // restarts every time a new question loads
 
   // Reset countdown when user clicks record (shows they are active)
   const handleStartRecording = async () => {
@@ -223,7 +224,7 @@ export default function LiveInterviewPage() {
                     </button>
                   </div>
 
-                  {phase === STATES.QUESTION && (
+                  {phase === STATES.QUESTION && questionType !== 'coding' && (
                     <p className="text-sm text-gray-400 mb-5">
                       Answer using your voice. Recording starts when you click <span className="text-white font-medium">Start Answering</span>.
                     </p>
@@ -344,7 +345,13 @@ export default function LiveInterviewPage() {
                     </motion.div>
                   )}
 
-                  {phase === STATES.QUESTION && (
+                  {phase === STATES.QUESTION && questionType === 'coding' && (
+                    <div className="mb-6">
+                      <CodeEditor onSubmitCode={submitCode} />
+                    </div>
+                  )}
+
+                  {phase === STATES.QUESTION && questionType !== 'coding' && (
                     <div className="flex flex-wrap gap-3">
                       <motion.button
                         whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
@@ -386,7 +393,7 @@ export default function LiveInterviewPage() {
                 </div>
               </div>
 
-              {phase === STATES.RECORDING && (
+              {phase === STATES.RECORDING && questionType !== 'coding' && (
                 <div className="flex flex-wrap gap-3">
                   <motion.button
                     whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}

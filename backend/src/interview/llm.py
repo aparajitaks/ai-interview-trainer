@@ -101,12 +101,8 @@ def _pick_bank(role: str) -> List[str]:
 
 
 def generate_first_question(role: str) -> str:
-    if _LLM_READY:
-        try:
-            return _gemini_question(role, [], [])
-        except Exception as exc:
-            logger.warning("Gemini question generation failed: %s", exc)
-    return _pick_bank(role)[0]
+    question, _ = generate_first_question_payload(role)
+    return question
 
 
 def generate_next_question(
@@ -114,13 +110,31 @@ def generate_next_question(
     questions: List[str],
     answers:   List[str],
 ) -> str:
+    question, _ = generate_next_question_payload(role, questions, answers)
+    return question
+
+
+def generate_first_question_payload(role: str) -> Tuple[str, str]:
     if _LLM_READY:
         try:
-            return _gemini_question(role, questions, answers)
+            return _gemini_question_payload(role, [], [])
+        except Exception as exc:
+            logger.warning("Gemini question generation failed: %s", exc)
+    question = _pick_bank(role)[0]
+    return question, _infer_question_type(question)
+
+
+def generate_next_question_payload(
+    role: str, questions: List[str], answers: List[str]
+) -> Tuple[str, str]:
+    if _LLM_READY:
+        try:
+            return _gemini_question_payload(role, questions, answers)
         except Exception as exc:
             logger.warning("Gemini follow-up failed: %s", exc)
     bank = _pick_bank(role)
-    return bank[len(questions) % len(bank)]
+    question = bank[len(questions) % len(bank)]
+    return question, _infer_question_type(question)
 
 
 def evaluate_answer(question: str, answer: str, role: str) -> Tuple[str, int]:
@@ -158,7 +172,7 @@ _SYSTEM = (
 )
 
 
-def _gemini_question(role: str, questions: List[str], answers: List[str]) -> str:
+def _gemini_question_payload(role: str, questions: List[str], answers: List[str]) -> Tuple[str, str]:
     history = "".join(
         f"Q{i+1}: {q}\nA{i+1}: {a}\n\n"
         for i, (q, a) in enumerate(zip(questions, answers))
@@ -167,10 +181,45 @@ def _gemini_question(role: str, questions: List[str], answers: List[str]) -> str
         f"{_SYSTEM}\n\n"
         f"Interviewing candidate for: {role}.\n"
         + (f"Interview so far:\n{history}\n" if history else "")
-        + "Ask ONE focused technical question. Output only the question, no preamble."
+        + (
+            "Ask ONE focused technical question and return ONLY valid JSON with keys "
+            '{"question":"...", "type":"coding|text"}. '
+            "Use type='coding' for implementation problems where candidate should write code, "
+            "otherwise type='text'."
+        )
     )
     resp = _client.models.generate_content(model=_MODEL, contents=prompt)
-    return resp.text.strip()
+    raw = (resp.text or "").strip()
+    try:
+        parsed = json.loads(raw)
+        question = str(parsed.get("question", "")).strip()
+        qtype = str(parsed.get("type", "text")).strip().lower()
+        if not question:
+            raise ValueError("missing question")
+        if qtype not in {"coding", "text"}:
+            qtype = _infer_question_type(question)
+        return question, qtype
+    except Exception:
+        question = raw
+        return question, _infer_question_type(question)
+
+
+def _infer_question_type(question: str) -> str:
+    q = (question or "").lower()
+    coding_markers = (
+        "write a function",
+        "implement",
+        "code",
+        "algorithm",
+        "time complexity",
+        "space complexity",
+        "leetcode",
+        "binary tree",
+        "array",
+        "string manipulation",
+        "dynamic programming",
+    )
+    return "coding" if any(marker in q for marker in coding_markers) else "text"
 
 
 def _gemini_evaluate(question: str, answer: str, role: str) -> Tuple[str, int]:
