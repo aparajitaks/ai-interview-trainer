@@ -2,11 +2,53 @@
 @tailwind components;
 @tailwind utilities;
 
-html, body, #root {
-  height: 100%;
+@layer base {
+  html { @apply scroll-smooth; }
+
+  body {
+    @apply bg-[#0A0F1E] text-white font-sans antialiased;
+    background-image: radial-gradient(ellipse at 20% 10%, rgba(99,102,241,0.08) 0%, transparent 60%),
+                      radial-gradient(ellipse at 80% 80%, rgba(139,92,246,0.06) 0%, transparent 60%);
+  }
+
+  ::-webkit-scrollbar       { width: 5px; }
+  ::-webkit-scrollbar-track { background: #0A0F1E; }
+  ::-webkit-scrollbar-thumb { @apply bg-indigo-600/50 rounded-full; }
 }
 
-body {
-  background-color: #0f172a; /* gray-900 */
-  color: #f3f4f6; /* gray-100 */
+@layer components {
+  /* Glass card */
+  .glass {
+    @apply bg-white/[0.04] backdrop-blur-xl border border-white/[0.08] rounded-2xl;
+  }
+
+  /* Gradient text */
+  .gradient-text {
+    @apply bg-gradient-to-r from-indigo-400 via-purple-400 to-cyan-400
+           bg-clip-text text-transparent;
+  }
+
+  /* Primary CTA button */
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2
+           px-6 py-3 rounded-xl font-semibold text-white
+           bg-gradient-to-r from-indigo-600 to-purple-600
+           hover:from-indigo-500 hover:to-purple-500
+           active:scale-95 transition-all duration-200
+           shadow-lg shadow-indigo-500/20
+           disabled:opacity-40 disabled:cursor-not-allowed disabled:active:scale-100;
+  }
+
+  /* Ghost button */
+  .btn-ghost {
+    @apply inline-flex items-center justify-center gap-2
+           px-6 py-3 rounded-xl font-medium text-gray-400
+           glass hover:text-white hover:bg-white/[0.07]
+           active:scale-95 transition-all duration-200;
+  }
+
+  /* Metric label */
+  .metric-label {
+    @apply text-[10px] font-semibold uppercase tracking-[0.15em] text-gray-500;
+  }
 }
