@@ -6,37 +6,37 @@ import Badge           from '../components/ui/Badge.jsx'
 /* ── Feature cards data ─────────────────────────────────────────────────── */
 const FEATURES = [
   {
-    icon:  '🧠',
+    icon:  'AI',
     title: 'AI Interview Simulation',
     desc:  'Practice real interviews with dynamic, domain-specific questions and intelligent follow-ups.',
     color: 'group-hover:text-purple-400',
   },
   {
-    icon:  '🎤',
+    icon:  'Voice',
     title: 'Answer Evaluation',
     desc:  'Get detailed analysis of your technical accuracy, clarity, and depth of understanding.',
     color: 'group-hover:text-cyan-400',
   },
   {
-    icon:  '🤖',
+    icon:  'LLM',
     title: 'Smart Feedback',
     desc:  'Receive human-like feedback highlighting your strengths and areas for improvement.',
     color: 'group-hover:text-indigo-400',
   },
   {
-    icon:  '📚',
+    icon:  'Learn',
     title: 'Learning Mode',
     desc:  'Even if you skip, learn the correct answers with explanations, gap analysis, and structured responses.',
     color: 'group-hover:text-emerald-400',
   },
   {
-    icon:  '📊',
+    icon:  'Data',
     title: 'Performance Insights',
     desc:  'Track your scores, identify weak areas, and monitor your progress over time.',
     color: 'group-hover:text-amber-400',
   },
   {
-    icon:  '🎯',
+    icon:  'Goal',
     title: 'Improvement Plan',
     desc:  'Get a personalized roadmap with topics to study and practical steps to improve.',
     color: 'group-hover:text-rose-400',
@@ -91,7 +91,7 @@ export default function LandingPage() {
         <header className="relative z-10">
           <nav className="max-w-7xl mx-auto flex items-center justify-between px-6 py-5">
             <div className="flex items-center gap-2.5">
-              <span className="text-2xl select-none">🎯</span>
+              <span className="text-2xl select-none">IA</span>
               <span className="font-black text-xl tracking-tight gradient-text">
                 InterviewAI
               </span>
@@ -158,7 +158,7 @@ export default function LandingPage() {
                          hover:from-purple-600 hover:to-rose-500
                          shadow-2xl shadow-purple-500/20 transition-all duration-200"
             >
-              🎙️ Live Interview →
+              Live Interview →
             </motion.button>
           </motion.div>
 

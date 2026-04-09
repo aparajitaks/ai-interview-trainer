@@ -184,7 +184,7 @@ export default function UploadPage() {
                   <div className="w-16 h-16 rounded-2xl bg-green-500/[0.12]
                                   border border-green-500/20
                                   flex items-center justify-center text-3xl">
-                    🎬
+                    Video
                   </div>
                   <div>
                     <p className="font-semibold text-white text-lg leading-tight">
@@ -215,7 +215,7 @@ export default function UploadPage() {
                                   flex items-center justify-center text-5xl mb-1
                                   transition-transform duration-300
                                   group-hover:scale-110">
-                    {isDragging ? '⬇️' : '📹'}
+                    {isDragging ? 'Drop' : 'Video'}
                   </div>
                   <div>
                     <p className="text-white font-semibold text-xl">{dropLabel}</p>
@@ -256,7 +256,7 @@ export default function UploadPage() {
                            border border-red-500/20 bg-red-500/[0.06]"
               >
                 <p className="text-red-400 text-sm text-center">
-                  ⚠️ {fileError || error}
+                  Warning: {fileError || error}
                 </p>
               </motion.div>
             )}

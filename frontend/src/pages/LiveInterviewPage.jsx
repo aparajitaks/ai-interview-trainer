@@ -180,7 +180,7 @@ export default function LiveInterviewPage() {
                            hover:from-purple-500 hover:to-indigo-500
                            shadow-xl shadow-purple-500/20 transition-all"
               >
-                🎙️ Start Live Interview →
+                Start Live Interview →
               </motion.button>
             </motion.div>
           )}
@@ -212,7 +212,7 @@ export default function LiveInterviewPage() {
                   <div className="flex items-center justify-between mb-6">
                     <div className="flex items-center gap-3">
                       {phase === STATES.RECORDING
-                        ? <Badge variant="live">🔴 Recording</Badge>
+                        ? <Badge variant="live">Recording</Badge>
                         : phase === STATES.PROCESSING
                           ? <Badge variant="warning">⚙️ Processing</Badge>
                           : <Badge variant="success">Ready to Answer</Badge>
@@ -294,7 +294,7 @@ export default function LiveInterviewPage() {
                       initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
                       className="glass rounded-xl px-5 py-3 border border-amber-500/20 bg-amber-500/5 mb-4"
                     >
-                      <p className="text-amber-400 text-sm">⏭ No response detected. Moving to next question…</p>
+                      <p className="text-amber-400 text-sm">No response detected. Moving to next question...</p>
                     </motion.div>
                   )}
                   </AnimatePresence>
@@ -302,7 +302,7 @@ export default function LiveInterviewPage() {
                   {/* Mic permission error */}
                   {permError && (
                     <div className="glass rounded-xl px-5 py-3 border border-red-500/20 bg-red-500/5 mb-4">
-                      <p className="text-red-400 text-sm">⚠️ {permError}</p>
+                      <p className="text-red-400 text-sm">Warning: {permError}</p>
                     </div>
                   )}
 
@@ -354,7 +354,7 @@ export default function LiveInterviewPage() {
                                   hover:from-red-500 hover:to-rose-400
                                   shadow-xl shadow-red-500/20 transition-all"
                       >
-                        🎤 Start Answering
+                        Start Answering
                       </motion.button>
 
                       <motion.button
@@ -365,7 +365,7 @@ export default function LiveInterviewPage() {
                                   glass border border-white/10
                                   hover:border-white/20 hover:text-gray-200 transition-all"
                       >
-                        Skip ⏭
+                        Skip
                       </motion.button>
 
                       <motion.button
@@ -406,7 +406,7 @@ export default function LiveInterviewPage() {
                                glass border border-white/10
                                hover:border-white/20 hover:text-gray-200 transition-all"
                   >
-                    Skip ⏭
+                    Skip
                   </motion.button>
                   <motion.button
                     whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
@@ -434,7 +434,7 @@ export default function LiveInterviewPage() {
           {phase === STATES.COMPLETE && finalResult && (
             <motion.div key="complete" {...fu(0)} className="max-w-lg mx-auto">
               <div className="flex justify-center mb-6">
-                <Badge variant="success">Interview Complete 🎉</Badge>
+                <Badge variant="success">Interview Complete</Badge>
               </div>
               <h2 className="text-4xl font-black text-center mb-2">
                 Great job, <span className="gradient-text">well done!</span>
@@ -508,7 +508,7 @@ export default function LiveInterviewPage() {
           {/* ── ERROR ────────────────────────────────────────────────── */}
           {phase === STATES.ERROR && (
             <motion.div key="error" {...fu(0)} className="max-w-md mx-auto text-center py-20">
-              <div className="text-6xl mb-6">⚠️</div>
+              <div className="text-6xl mb-6">!</div>
               <h2 className="text-2xl font-bold text-white mb-3">Something went wrong</h2>
               <p className="text-red-400 text-sm mb-8 glass rounded-xl px-5 py-3">
                 {error}

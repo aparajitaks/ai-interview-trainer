@@ -17,7 +17,7 @@ const EMOTIONS = {
 /* ── Posture config ─────────────────────────────────────────────────────── */
 const POSTURES = {
   Good:      { icon: '✅', label: 'Good',      subtext: 'Keep it up — confident body language.',  color: 'text-green-400',  border: 'border-green-500/15'  },
-  Slouching: { icon: '⚠️', label: 'Slouching', subtext: 'Straighten your back for a better impression.', color: 'text-yellow-400', border: 'border-yellow-500/15' },
+  Slouching: { icon: '!', label: 'Slouching', subtext: 'Straighten your back for a better impression.', color: 'text-yellow-400', border: 'border-yellow-500/15' },
   Leaning:   { icon: '↗️', label: 'Leaning',   subtext: 'Try sitting squarely in front of the camera.',  color: 'text-orange-400', border: 'border-orange-500/15' },
   Unknown:   { icon: '❓', label: 'Unknown',   subtext: 'Could not detect your pose clearly.',   color: 'text-gray-400',   border: 'border-white/10'      },
 }

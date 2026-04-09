@@ -14,7 +14,7 @@ app.add_middleware(
 
 @app.get("/")
 def root():
-    return {"message": "AI Interview Backend Running 🚀"}
+    return {"message": "AI Interview Backend Running"}
 
 
 @app.get("/health")

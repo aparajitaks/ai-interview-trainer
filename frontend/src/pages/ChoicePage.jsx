@@ -46,7 +46,7 @@ export default function ChoicePage() {
                          hover:from-purple-600 hover:to-rose-500
                          shadow-xl shadow-purple-500/20 transition-all"
             >
-              🎙️ Live Interview →
+              Live Interview →
             </motion.button>
           </div>
         </div>
