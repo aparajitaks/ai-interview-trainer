@@ -350,7 +350,7 @@ async def submit_answer(
         next_question    = next_q,
         type             = next_q_type if not is_complete else "text",
         is_last          = is_complete,
-        message          = "Interview complete" if is_complete else None,
+        message          = "last question answered" if is_complete else None,
         is_complete      = is_complete,
         round_number     = completed_rounds,
         total_rounds     = session.max_rounds,

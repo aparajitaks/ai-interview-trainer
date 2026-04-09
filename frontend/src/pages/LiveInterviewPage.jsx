@@ -54,6 +54,7 @@ export default function LiveInterviewPage() {
 
   /* Whether the interview is in an active answering phase */
   const isInterviewActive = phase === STATES.QUESTION || phase === STATES.RECORDING || phase === STATES.PROCESSING
+  const isLastQuestion = roundNumber >= totalRounds
 
 
 
@@ -66,7 +67,7 @@ export default function LiveInterviewPage() {
   // Start / reset countdown whenever a new question appears.
   // Clear it if the user starts recording or phase changes away from QUESTION.
   useEffect(() => {
-    if (phase !== STATES.QUESTION || questionType === 'coding') {
+    if (phase !== STATES.QUESTION || questionType === 'coding' || isLastQuestion) {
       clearInterval(countdownRef.current)
       setCountdown(AUTO_SKIP_SECS)
       setAutoSkipAlert(false)
@@ -89,7 +90,7 @@ export default function LiveInterviewPage() {
     }, 1000)
 
     return () => clearInterval(countdownRef.current)
-  }, [phase, question, questionType]) // restarts every time a new question loads
+  }, [phase, question, questionType, isLastQuestion]) // restarts every time a new question loads
 
   // Reset countdown when user clicks record (shows they are active)
   const handleStartRecording = async () => {
