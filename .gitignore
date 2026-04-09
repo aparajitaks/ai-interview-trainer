@@ -1,0 +1,11 @@
+# Environment variables
+.env
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+# Frontend build artifacts
+frontend/dist/
+frontend/.venv/
