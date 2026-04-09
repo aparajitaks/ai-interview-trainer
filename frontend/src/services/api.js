@@ -5,11 +5,15 @@
  * All network details are centralised here so components stay clean.
  */
 
-const API_BASE = import.meta.env.VITE_API_URL ?? 'http://localhost:8000'
+const API = import.meta.env.VITE_API_URL ?? 'http://localhost:8000'
 
 async function apiCall(path, options) {
+  const url = `${API}${path}`
+  console.log('Calling API:', url)
   try {
-    return await fetch(`${API_BASE}${path}`, options)
+    const res = await fetch(url, options)
+    if (!res.ok) throw new Error(`API failed (${res.status})`)
+    return res
   } catch (err) {
     console.error('API ERROR:', err)
     throw err
@@ -65,7 +69,9 @@ export async function analyzeVideo(file, onProgress) {
     )
 
     xhr.timeout = 5 * 60 * 1000  // 5 min max
-    xhr.open('POST', `${API_BASE}/analyze-video`)
+    const url = `${API}/analyze-video`
+    console.log('Calling API:', url)
+    xhr.open('POST', url)
     xhr.send(formData)
   })
 }

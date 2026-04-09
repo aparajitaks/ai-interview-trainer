@@ -5,11 +5,13 @@
  * Completely separate from api.js (video analysis) — easy to swap backends.
  */
 
-const API_BASE = import.meta.env.VITE_API_URL ?? 'http://localhost:8000'
+const API = import.meta.env.VITE_API_URL ?? 'http://localhost:8000'
 
 async function apiCall(path, options) {
+  const url = `${API}${path}`
+  console.log('Calling API:', url)
   try {
-    return await fetch(`${API_BASE}${path}`, options)
+    return await fetch(url, options)
   } catch (err) {
     console.error('API ERROR:', err)
     throw err

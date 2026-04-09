@@ -46,6 +46,7 @@ from src.utils.logger import get_logger
 logger = get_logger(__name__)
 
 router = APIRouter(prefix="/interview", tags=["Live Interview"])
+public_router = APIRouter(tags=["Live Interview Compatibility"])
 
 
 # ---------------------------------------------------------------------------
@@ -159,6 +160,11 @@ async def start_interview(body: StartRequest) -> StartResponse:
         round_number = 1,
         total_rounds = session.max_rounds,
     )
+
+
+@public_router.post("/start-interview", response_model=StartResponse, summary="Start interview (compat route)")
+async def start_interview_compat(body: StartRequest) -> StartResponse:
+    return await start_interview(body)
 
 
 @router.post(
@@ -351,6 +357,16 @@ async def submit_answer(
     )
 
 
+@public_router.post("/submit-answer", response_model=SubmitResponse, summary="Submit answer (compat route)")
+async def submit_answer_compat(
+    request: Request,
+    session_id: Optional[str] = Form(None, description="Session ID from /start"),
+    audio: Optional[UploadFile] = File(None, description="Recorded audio (WebM/M4A/WAV)"),
+    answer: Optional[str] = Form(None, description="Direct text/code answer"),
+) -> SubmitResponse:
+    return await submit_answer(request, session_id, audio, answer)
+
+
 @router.post(
     "/skip-question",
     response_model = SkipResponse,
@@ -425,6 +441,13 @@ async def end_interview(
         session_id[:8], result.get("final_score"), len(result.get("question_reviews", [])),
     )
     return JSONResponse(content=result)
+
+
+@public_router.post("/end-interview", summary="End interview (compat route)")
+async def end_interview_compat(
+    session_id: str = Form(..., description="Session ID to end"),
+) -> JSONResponse:
+    return await end_interview(session_id)
 
 
 @router.get("/session/{session_id}", summary="Inspect session state (debug)")

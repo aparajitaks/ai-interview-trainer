@@ -49,6 +49,7 @@ from src.pipeline.video_pipeline import AnalysisResult, VideoAnalysisPipeline
 from src.preprocessing.video_loader import VideoLoadError, VideoLoader
 from src.utils.config import AppConfig
 from src.utils.logger import get_logger
+from src.api.interview      import public_router as interview_public_router
 from src.api.interview      import router as interview_router
 from src.api.evaluation     import router as evaluation_router
 from src.api.ai_interview   import router as ai_interview_router
@@ -129,6 +130,7 @@ app.add_middleware(
 
 # Mount routers
 app.include_router(interview_router)
+app.include_router(interview_public_router)
 app.include_router(evaluation_router)
 app.include_router(ai_interview_router)
 app.include_router(live_feedback_router)
