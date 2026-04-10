@@ -14,6 +14,7 @@ Endpoints
 
 from __future__ import annotations
 
+import re
 from typing import Any, Dict, Optional, Literal
 
 from fastapi import APIRouter, File, Form, HTTPException, Request, UploadFile, status
@@ -128,6 +129,23 @@ def _build_history(session: InterviewSession) -> list[RoundMemory]:
             )
         )
     return memories
+
+
+def _infer_next_question_type(question: str) -> Literal["coding", "text"]:
+    """
+    Conservative classifier for next-question UI mode.
+    Avoid marking generic "write about..." prompts as coding tasks.
+    """
+    q = (question or "").lower().strip()
+    coding_patterns = (
+        r"\bimplement\b",
+        r"\bwrite\s+(a|an|the)?\s*(function|program|code|algorithm|solution)\b",
+        r"\bsolve\s+(this|the)\s+(problem|coding)\b",
+        r"\btime complexity\b",
+        r"\bspace complexity\b",
+        r"\bleetcode\b",
+    )
+    return "coding" if any(re.search(p, q) for p in coding_patterns) else "text"
 
 
 # ---------------------------------------------------------------------------
@@ -314,7 +332,7 @@ async def submit_answer(
             next_q, next_q_type = generate_next_question_payload(session.role, prev_qs, prev_as)
         else:
             next_q = step.next_question
-            next_q_type = "coding" if "implement" in (next_q or "").lower() or "write" in (next_q or "").lower() else "text"
+            next_q_type = _infer_next_question_type(next_q or "")
         add_question_v5(
             session_id      = session_id,
             question        = next_q,
