@@ -28,6 +28,7 @@ export function useInterview() {
   const [finalResult, setFinalResult] = useState(null)
   const [error, setError] = useState('')
   const [isFinalizingLastAnswer, setIsFinalizingLastAnswer] = useState(false)
+  const [isAnswered, setIsAnswered] = useState(false)
   const [isFollowUp, setIsFollowUp] = useState(false)
   const [followUpReason, setFollowUpReason] = useState(null)
 
@@ -51,7 +52,14 @@ export function useInterview() {
 
   useEffect(() => {
     if (!question) return
-    // New question loaded: always clear finalizing state.
+    // New question loaded: isolate per-question UI state.
+    setLastTranscript('')
+    setLastFeedback('')
+    setLastScore(null)
+    setLastExpectedAnswer('')
+    setLastGapAnalysis('')
+    setLastImprovementSuggestion('')
+    setIsAnswered(false)
     setIsFinalizingLastAnswer(false)
   }, [question])
 
@@ -110,6 +118,7 @@ export function useInterview() {
         setLastImprovementSuggestion(data.improvement_suggestion || '')
         setIsFollowUp(data.follow_up || data.is_follow_up || false)
         setFollowUpReason(data.follow_up_reason || null)
+        setIsAnswered(true)
 
         if (data.is_last) {
           setIsFinalizingLastAnswer(true)
@@ -118,6 +127,7 @@ export function useInterview() {
           setIsFinalizingLastAnswer(false)
           setPhase(STATES.COMPLETE)
         } else {
+          setIsAnswered(false)
           setQuestion(data.next_question)
           setQuestionType(data.type || 'text')
           setRoundNumber(data.round_number + 1)
@@ -186,6 +196,7 @@ export function useInterview() {
     setLastGapAnalysis('')
     setLastImprovementSuggestion('')
     setIsFinalizingLastAnswer(false)
+    setIsAnswered(false)
     setFinalResult(null)
     setError('')
     setIsFollowUp(false)
@@ -220,6 +231,7 @@ export function useInterview() {
         setLastImprovementSuggestion(data.improvement_suggestion || '')
         setIsFollowUp(data.follow_up || data.is_follow_up || false)
         setFollowUpReason(data.follow_up_reason || null)
+        setIsAnswered(true)
 
         if (data.is_last) {
           setIsFinalizingLastAnswer(true)
@@ -228,6 +240,7 @@ export function useInterview() {
           setIsFinalizingLastAnswer(false)
           setPhase(STATES.COMPLETE)
         } else {
+          setIsAnswered(false)
           setQuestion(data.next_question)
           setQuestionType(data.type || 'text')
           setRoundNumber(data.round_number + 1)
@@ -261,6 +274,7 @@ export function useInterview() {
     finalResult,
     error,
     isFinalizingLastAnswer,
+    isAnswered,
     elapsed,
     isFollowUp,
     followUpReason,

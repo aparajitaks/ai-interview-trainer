@@ -48,7 +48,7 @@ export default function LiveInterviewPage() {
     question, questionType, roundNumber, totalRounds,
     lastTranscript, lastFeedback, lastScore,
     finalResult, error, isFinalizingLastAnswer, elapsed,
-    isFollowUp, followUpReason,
+    isFollowUp, followUpReason, isAnswered,
     begin, onRecordingStarted, submitAudio, submitCode, skip, quit, reset,
   } = useInterview()
 
@@ -318,7 +318,7 @@ export default function LiveInterviewPage() {
                   )}
 
                   {/* Previous answer feedback (shown briefly on question state) */}
-                  {phase === STATES.QUESTION && lastFeedback && roundNumber > 1 && (
+                  {phase === STATES.QUESTION && isAnswered && lastFeedback && roundNumber > 1 && (
                     <motion.div
                       initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
                       className={`glass rounded-2xl p-5 mb-5 border ${
