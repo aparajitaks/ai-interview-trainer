@@ -14,6 +14,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+import re
 from typing import List, Tuple
 
 logger = logging.getLogger(__name__)
@@ -190,8 +191,9 @@ def _gemini_question_payload(role: str, questions: List[str], answers: List[str]
     )
     resp = _client.models.generate_content(model=_MODEL, contents=prompt)
     raw = (resp.text or "").strip()
+    cleaned = _extract_json_candidate(raw)
     try:
-        parsed = json.loads(raw)
+        parsed = json.loads(cleaned)
         question = str(parsed.get("question", "")).strip()
         qtype = str(parsed.get("type", "text")).strip().lower()
         if not question:
@@ -200,8 +202,59 @@ def _gemini_question_payload(role: str, questions: List[str], answers: List[str]
             qtype = _infer_question_type(question)
         return question, qtype
     except Exception:
-        question = raw
+        question = _extract_question_from_text(raw)
         return question, _infer_question_type(question)
+
+
+def _extract_json_candidate(raw: str) -> str:
+    """
+    Normalize model output so json.loads can succeed.
+    Handles plain JSON, fenced JSON blocks, and extra prose around JSON.
+    """
+    text = (raw or "").strip()
+
+    # Strip markdown fences like ```json ... ```
+    if text.startswith("```"):
+        text = re.sub(r"^```(?:json)?\s*", "", text, flags=re.IGNORECASE)
+        text = re.sub(r"\s*```$", "", text)
+        text = text.strip()
+
+    # If wrapper prose exists, keep only the outermost JSON object.
+    if not text.startswith("{"):
+        start = text.find("{")
+        end = text.rfind("}")
+        if start != -1 and end != -1 and end > start:
+            text = text[start : end + 1]
+
+    return text
+
+
+def _extract_question_from_text(raw: str) -> str:
+    """
+    Best-effort fallback that avoids showing raw JSON/markdown in UI.
+    """
+    text = (raw or "").strip()
+    candidate = _extract_json_candidate(text)
+
+    # Try one more parse attempt in fallback path.
+    try:
+        parsed = json.loads(candidate)
+        q = str(parsed.get("question", "")).strip()
+        if q:
+            return q
+    except Exception:
+        pass
+
+    # Remove code fences and surrounding quotes/backticks if present.
+    text = re.sub(r"^```(?:json)?\s*", "", text, flags=re.IGNORECASE)
+    text = re.sub(r"\s*```$", "", text).strip()
+    text = text.strip("`").strip()
+
+    # If model returned JSON-looking text but parsing failed, hide braces content.
+    if text.startswith("{") and "question" in text.lower():
+        return "Please explain your approach to this problem."
+
+    return text
 
 
 def _infer_question_type(question: str) -> str:
