@@ -34,6 +34,7 @@ export function useInterview() {
 
   const [elapsed, setElapsed] = useState(0)
   const timerRef = useRef(null)
+  const isAlreadyEndedError = (msg = '') => msg.toLowerCase().includes('already ended')
 
   const startTimer = () => {
     setElapsed(0)
@@ -136,6 +137,18 @@ export function useInterview() {
         }
       } catch (err) {
         setIsFinalizingLastAnswer(false)
+        if (isAlreadyEndedError(err.message || '')) {
+          try {
+            const final = await endInterview(sessionId)
+            setFinalResult(final)
+            setPhase(STATES.COMPLETE)
+            return
+          } catch (endErr) {
+            setError(endErr.message || 'Failed to finalize interview')
+            setPhase(STATES.ERROR)
+            return
+          }
+        }
         setError(err.message)
         setPhase(STATES.ERROR)
       }
@@ -162,6 +175,18 @@ export function useInterview() {
         setPhase(STATES.QUESTION)
       }
     } catch (err) {
+      if (isAlreadyEndedError(err.message || '')) {
+        try {
+          const final = await endInterview(sessionId)
+          setFinalResult(final)
+          setPhase(STATES.COMPLETE)
+          return
+        } catch (endErr) {
+          setError(endErr.message || 'Failed to finalize interview')
+          setPhase(STATES.ERROR)
+          return
+        }
+      }
       setError(err.message)
       setPhase(STATES.ERROR)
     }
@@ -173,12 +198,28 @@ export function useInterview() {
       setPhase(STATES.IDLE)
       return
     }
+    setError('')
+    setIsFinalizingLastAnswer(false)
+    setPhase(STATES.PROCESSING)
     try {
       const final = await endInterview(sessionId)
       setFinalResult(final)
       setPhase(STATES.COMPLETE)
-    } catch {
-      setPhase(STATES.IDLE)
+    } catch (err) {
+      if (isAlreadyEndedError(err.message || '')) {
+        try {
+          const final = await endInterview(sessionId)
+          setFinalResult(final)
+          setPhase(STATES.COMPLETE)
+          return
+        } catch (endErr) {
+          setError(endErr.message || 'Failed to end interview')
+          setPhase(STATES.ERROR)
+          return
+        }
+      }
+      setError(err.message || 'Failed to end interview')
+      setPhase(STATES.ERROR)
     }
   }, [sessionId])
 
@@ -249,6 +290,18 @@ export function useInterview() {
         }
       } catch (err) {
         setIsFinalizingLastAnswer(false)
+        if (isAlreadyEndedError(err.message || '')) {
+          try {
+            const final = await endInterview(sessionId)
+            setFinalResult(final)
+            setPhase(STATES.COMPLETE)
+            return
+          } catch (endErr) {
+            setError(endErr.message || 'Failed to finalize interview')
+            setPhase(STATES.ERROR)
+            return
+          }
+        }
         setError(err.message)
         setPhase(STATES.ERROR)
       }

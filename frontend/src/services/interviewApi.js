@@ -5,10 +5,16 @@
  * Completely separate from api.js (video analysis) — easy to swap backends.
  */
 
-const API = import.meta.env.VITE_API_URL ?? 'http://localhost:8000'
+const API_CANDIDATES = [
+  import.meta.env.VITE_API_URL,
+  'http://127.0.0.1:8001',
+  'http://localhost:8001',
+  'http://127.0.0.1:8000',
+  'http://localhost:8000',
+].filter(Boolean)
 
-async function apiCall(path, options) {
-  const url = `${API}${path}`
+async function apiCall(base, path, options) {
+  const url = `${base}${path}`
   console.log('Calling API:', url)
   try {
     return await fetch(url, options)
@@ -25,14 +31,25 @@ async function parseError(res, fallbackMessage) {
 
 async function requestWithFallbacks({ candidates, options, errorMessage }) {
   let lastStatus = null
-  for (const path of candidates) {
-    const res = await apiCall(path, options)
-    if (res.ok) return res.json()
-    lastStatus = res.status
-    // Try next candidate only when route is missing.
-    if (res.status !== 404) {
-      await parseError(res, `${errorMessage} (${res.status})`)
+  let sawNetworkError = false
+  for (const base of API_CANDIDATES) {
+    for (const path of candidates) {
+      try {
+        const res = await apiCall(base, path, options)
+        if (res.ok) return res.json()
+        lastStatus = res.status
+        // Try next route/base only when route is missing.
+        if (res.status !== 404) {
+          await parseError(res, `${errorMessage} (${res.status})`)
+        }
+      } catch {
+        // If one base is down, keep trying others.
+        sawNetworkError = true
+      }
     }
+  }
+  if (sawNetworkError && !lastStatus) {
+    throw new Error(`${errorMessage}: could not reach backend on known local URLs`)
   }
   throw new Error(`${errorMessage}${lastStatus ? ` (${lastStatus})` : ''}`)
 }

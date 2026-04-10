@@ -127,8 +127,15 @@ export default function LiveInterviewPage() {
   }, [audioBlob, phase, submitAudio, clearBlob])
 
   const handleStopRecording = () => stopRecording()
-  const handleEndInterview = () => {
-    quit()
+  const handleEndInterview = async () => {
+    clearInterval(countdownRef.current)
+    setCountdown(AUTO_SKIP_SECS)
+    setAutoSkipAlert(false)
+    if (phase === STATES.RECORDING) {
+      stopRecording()
+      clearBlob()
+    }
+    await quit()
   }
 
   /* ═════════════════════════════════════════════════════════════════════

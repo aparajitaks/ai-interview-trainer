@@ -35,11 +35,7 @@ from src.interview.session import (
     skip_round,
 )
 from src.interview.transcription import transcribe
-from src.llm_engine import (
-    RoundMemory,
-    generate_next_step,
-    is_ready as llm_ready,
-)
+from src.llm_engine import RoundMemory, generate_next_step
 from src.llm_engine.final_report import build_final_report
 from src.utils.logger import get_logger
 
@@ -272,12 +268,6 @@ async def submit_answer(
         result_gap = "No answer provided, so technical depth and clarity could not be assessed."
         result_improvement = "Answer even if unsure; start with fundamentals and one practical example."
     else:
-        if not llm_ready():
-            raise HTTPException(
-                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail="Gemini API is not configured. Set GEMINI_API_KEY to evaluate answers.",
-            )
-
         history = _build_history(session)
         follow_up_depth = session.rounds[-1].follow_up_depth if session.rounds else 0
         step = generate_next_step(
