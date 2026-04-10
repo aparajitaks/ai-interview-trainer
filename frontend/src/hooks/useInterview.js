@@ -156,9 +156,15 @@ export function useInterview() {
     [sessionId]
   )
 
-  const skip = useCallback(async () => {
+  const skip = useCallback(async ({ isAuto = false } = {}) => {
+    if (phase !== STATES.QUESTION) return
     stopTimer()
     if (!sessionId) return
+    if (isAuto && roundNumber >= totalRounds) {
+      // Never auto-skip the final question; wait for explicit user action.
+      setPhase(STATES.QUESTION)
+      return
+    }
     setPhase(STATES.PROCESSING)
     setError('')
     try {
@@ -190,7 +196,7 @@ export function useInterview() {
       setError(err.message)
       setPhase(STATES.ERROR)
     }
-  }, [sessionId])
+  }, [phase, roundNumber, totalRounds, sessionId])
 
   const quit = useCallback(async () => {
     stopTimer()

@@ -89,7 +89,7 @@ export default function LiveInterviewPage() {
         if (prev <= 1) {
           clearInterval(countdownRef.current)
           setAutoSkipAlert(true)
-          skip()          // fire skip when countdown hits 0
+          skip({ isAuto: true }) // fire auto-skip when countdown hits 0
           return 0
         }
         return prev - 1
