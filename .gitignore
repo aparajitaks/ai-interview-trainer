@@ -9,3 +9,12 @@ __pycache__/
 # Frontend build artifacts
 frontend/dist/
 frontend/.venv/
+
+# Dependencies
+node_modules/
+frontend/node_modules/
+
+# OS files
+.DS_Store
+**/.DS_Store
+

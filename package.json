@@ -1,0 +1,10 @@
+{
+  "name": "ai-interview-trainer-root",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "start:backend": "cd backend && .venv/bin/python src/main.py",
+    "start:frontend": "cd frontend && npm run dev",
+    "dev": "npx -y concurrently \"npm run start:backend\" \"npm run start:frontend\""
+  }
+}

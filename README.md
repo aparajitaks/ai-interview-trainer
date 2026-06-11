@@ -128,46 +128,57 @@ ai-interview-trainer/
 
 ## Run Locally
 
-## 1) Backend setup
+You can start both the frontend and backend together with a single command from the root directory, or start them in separate terminals.
 
+### Option 1: Start both together (Recommended)
+
+Make sure you have set up the virtual environment in `backend/`, installed dependencies, and installed the frontend dependencies first.
+
+From the root directory of the project, run:
 ```bash
-cd backend
-python3 -m venv .venv
-source .venv/bin/activate          # Windows: .venv\Scripts\activate
-pip install -r requirements.txt
-```
-
-Create backend environment variable:
-
-```bash
-export GEMINI_API_KEY=your_key     # Windows PowerShell: $env:GEMINI_API_KEY="your_key"
-```
-
-Run FastAPI:
-
-```bash
-uvicorn src.main:app --host 0.0.0.0 --port 8000
-```
-
-Backend health check:
-
-```bash
-http://127.0.0.1:8000/health
-```
-
-## 2) Frontend setup
-
-```bash
-cd frontend
-npm install
 npm run dev
 ```
+This starts both the FastAPI backend (on port 8000) and the React/Vite frontend (on port 5173) in a single terminal.
 
-Frontend runs at:
+---
 
-```bash
-http://127.0.0.1:5173
-```
+### Option 2: Start in separate terminals
+
+#### Terminal 1 — Backend Setup & Run
+
+1. Navigate to the backend directory and set up a virtual environment:
+   ```bash
+   cd backend
+   python3 -m venv .venv
+   source .venv/bin/activate          # Windows: .venv\Scripts\activate
+   pip install -r requirements.txt
+   ```
+
+2. Set the `GEMINI_API_KEY` environment variable:
+   ```bash
+   export GEMINI_API_KEY=your_key     # Windows PowerShell: $env:GEMINI_API_KEY="your_key"
+   ```
+
+3. Start the backend:
+   ```bash
+   python src/main.py
+   ```
+   *(Backend health check is available at http://127.0.0.1:8000/health)*
+
+#### Terminal 2 — Frontend Setup & Run
+
+1. Navigate to the frontend directory:
+   ```bash
+   cd frontend
+   npm install
+   ```
+
+2. Start the development server:
+   ```bash
+   npm run dev
+   ```
+   *(Frontend runs at http://127.0.0.1:5173)*
+
 
 ---
 
